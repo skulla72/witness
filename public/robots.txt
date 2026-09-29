@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /messages/
+Disallow: /notifications
+Disallow: /checkout/
+Disallow: /reset-password
+Disallow: /forgot-password
+
+Sitemap: https://witnessmovement.com/sitemap.xml

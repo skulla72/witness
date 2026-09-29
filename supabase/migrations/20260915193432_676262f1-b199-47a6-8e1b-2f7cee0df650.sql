@@ -1,0 +1,1 @@
+ALTER TABLE public.user_survey ADD COLUMN IF NOT EXISTS gender TEXT NOT NULL DEFAULT 'unspecified';

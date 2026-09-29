@@ -1,0 +1,1 @@
+ALTER TABLE public.user_survey ADD COLUMN IF NOT EXISTS answers jsonb NOT NULL DEFAULT '{}'::jsonb;

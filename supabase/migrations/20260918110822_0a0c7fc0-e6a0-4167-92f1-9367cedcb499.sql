@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.send_heads_up(UUID, TEXT);

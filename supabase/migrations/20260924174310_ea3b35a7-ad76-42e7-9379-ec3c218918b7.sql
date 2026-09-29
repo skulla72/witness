@@ -1,0 +1,1 @@
+COMMENT ON COLUMN public.organizations.logo_url IS 'Organization profile image path or URL. Official logos added in September 2026 were sourced from each organization own website or brand resources.';

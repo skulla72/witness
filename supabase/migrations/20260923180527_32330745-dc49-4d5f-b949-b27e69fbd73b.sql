@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.guard_counselor_review() FROM PUBLIC, anon, authenticated;

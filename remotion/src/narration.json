@@ -1,0 +1,46 @@
+[
+  {
+    "id": "title",
+    "seconds": 9
+  },
+  {
+    "id": "prayer",
+    "seconds": 13.248
+  },
+  {
+    "id": "askanswer",
+    "seconds": 13.152
+  },
+  {
+    "id": "answered",
+    "seconds": 10.656
+  },
+  {
+    "id": "record",
+    "seconds": 13.104
+  },
+  {
+    "id": "gratitude",
+    "seconds": 9.864
+  },
+  {
+    "id": "walk",
+    "seconds": 13.152
+  },
+  {
+    "id": "sit",
+    "seconds": 10.416
+  },
+  {
+    "id": "you",
+    "seconds": 8.808
+  },
+  {
+    "id": "ledger",
+    "seconds": 9.96
+  },
+  {
+    "id": "outro",
+    "seconds": 8.952
+  }
+]

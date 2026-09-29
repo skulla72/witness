@@ -1,0 +1,2 @@
+ALTER TABLE public.organizations ADD COLUMN IF NOT EXISTS google_place_id text;
+CREATE UNIQUE INDEX IF NOT EXISTS organizations_google_place_id_key ON public.organizations (google_place_id) WHERE google_place_id IS NOT NULL;

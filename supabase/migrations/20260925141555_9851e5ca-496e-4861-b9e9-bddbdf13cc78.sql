@@ -1,0 +1,1 @@
+ALTER TABLE public.prayer_posts ADD COLUMN IF NOT EXISTS overlay jsonb;

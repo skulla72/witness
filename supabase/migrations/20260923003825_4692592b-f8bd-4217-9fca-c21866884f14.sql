@@ -1,0 +1,1 @@
+ALTER TABLE public.prayer_posts ADD COLUMN IF NOT EXISTS verse_ref TEXT, ADD COLUMN IF NOT EXISTS verse_text TEXT;

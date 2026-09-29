@@ -1,0 +1,57 @@
+[
+  {
+    "id": "title",
+    "voice": "onyx",
+    "text": "This is Witness. A quiet place to bring a prayer, and to come back and witness the answer."
+  },
+  {
+    "id": "prayer",
+    "voice": "onyx",
+    "text": "It opens on the Prayer tab. Not a wall of noise — a short, honest feed of prayers from people you actually know. No ads. No algorithm. No endless scroll."
+  },
+  {
+    "id": "askanswer",
+    "voice": "onyx",
+    "text": "Every prayer here has two halves. First the ask, recorded in the moment it's still raw. Then, whenever it comes, the answer — recorded later, and linked to the ask forever. That pairing is the whole point of the app."
+  },
+  {
+    "id": "answered",
+    "voice": "onyx",
+    "text": "Those answers gather on the He Answered wall. Only answers live here — never asks. It's a place to go when you're still waiting, and you need to see that waiting ends."
+  },
+  {
+    "id": "record",
+    "voice": "onyx",
+    "text": "Bringing your own prayer takes about ninety seconds. Speak it on video, leave a voice note, or simply type it out. Then you choose who hears it — only you, your circle, your church, or anyone."
+  },
+  {
+    "id": "gratitude",
+    "voice": "onyx",
+    "text": "The Gratitude tab is a different rhythm. Lighter, warmer, thirty seconds a day — for the small mercies that are easy to walk right past."
+  },
+  {
+    "id": "walk",
+    "voice": "onyx",
+    "text": "Some seasons are too heavy to carry alone. Walk With opens small, facilitated circles — grief, illness, addiction, waiting — where you're accompanied, not fixed."
+  },
+  {
+    "id": "sit",
+    "voice": "onyx",
+    "text": "And sometimes there are no words. So you can simply sit with someone. Light a candle beside a stranger's storm. No chat, no comments. Presence counts."
+  },
+  {
+    "id": "you",
+    "voice": "onyx",
+    "text": "The You tab keeps your own walk quietly — your journal, your circle, your giving. Private by default, always."
+  },
+  {
+    "id": "ledger",
+    "voice": "onyx",
+    "text": "Underneath it all runs the Faithfulness Ledger. Every prayer you brought, every answer you marked. A record of what you asked, and what came back."
+  },
+  {
+    "id": "outro",
+    "voice": "onyx",
+    "text": "Asking. Thanking. Walking together. Faith, on display. Record one prayer today — then come back and mark the answer."
+  }
+]

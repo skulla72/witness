@@ -1,0 +1,1 @@
+ALTER TABLE public.profile_media DROP CONSTRAINT profile_media_page_type_page_id_display_order_key;

@@ -1,0 +1,1 @@
+SELECT slug, name, logo_url FROM public.organizations WHERE slug IN ('fellowship-of-christian-athletes-kansas-city','cavetime-tulsa','flatirons-church-west-golden','cross-point-church-nashville') ORDER BY name;

@@ -1,0 +1,2 @@
+ALTER TABLE public.donations ADD COLUMN IF NOT EXISTS tip_cents integer NOT NULL DEFAULT 0 CHECK (tip_cents >= 0);
+ALTER TABLE public.fund_gifts ADD COLUMN IF NOT EXISTS tip_cents integer NOT NULL DEFAULT 0 CHECK (tip_cents >= 0);
