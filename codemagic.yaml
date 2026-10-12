@@ -1,6 +1,38 @@
 # Manual builds only: no Git triggers and no store publishing configuration.
 # Signing files are selected from Codemagic's secure Code signing identities.
 workflows:
+  witness-ios-check:
+    name: Witness iPhone — compile check, simulator only
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    environment:
+      node: 22
+      xcode: latest
+    scripts:
+      - name: Install locked dependencies with Bun
+        script: |
+          set -euo pipefail
+          curl -fsSL https://bun.com/install | bash -s -- bun-v1.3.6
+          "$HOME/.bun/bin/bun" install --frozen-lockfile
+      - name: Compile the iPhone app without store signing
+        script: |
+          set -euo pipefail
+          export PATH="$HOME/.bun/bin:$PATH"
+          bunx --no-install cap sync ios
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build-native/ios-simulator \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+          ditto -c -k --sequesterRsrc --keepParent \
+            build-native/ios-simulator/Build/Products/Debug-iphonesimulator/App.app \
+            build-native/Witness-iOS-simulator.zip
+    artifacts:
+      - build-native/Witness-iOS-simulator.zip
   witness-ios:
     name: Witness iPhone — signed build, no upload
     instance_type: mac_mini_m2
