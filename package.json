@@ -13,7 +13,9 @@
     "mobile:sync": "cap sync",
     "mobile:assets": "capacitor-assets generate --assetPath mobile/assets --iosProject ios/App --androidProject android",
     "mobile:android": "cap open android",
-    "mobile:ios": "cap open ios"
+    "mobile:ios": "cap open ios",
+    "mobile:build:android": "bash scripts/build-native.sh android",
+    "mobile:build:ios": "bash scripts/build-native.sh ios"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.43",

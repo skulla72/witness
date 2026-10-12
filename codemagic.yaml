@@ -1,0 +1,64 @@
+# Manual builds only: no Git triggers and no store publishing configuration.
+# Signing files are selected from Codemagic's secure Code signing identities.
+workflows:
+  witness-ios:
+    name: Witness iPhone — signed build, no upload
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    inputs:
+      build_number:
+        description: iOS build number (1–9999); use a higher number for every new Apple upload.
+        type: number
+        default: 1
+    environment:
+      node: 22
+      xcode: latest
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.commonlight.witness
+    scripts:
+      - name: Install locked dependencies with Bun
+        script: |
+          set -euo pipefail
+          curl -fsSL https://bun.com/install | bash -s -- bun-v1.3.6
+          "$HOME/.bun/bin/bun" install --frozen-lockfile
+      - name: Build and export the signed iPhone app
+        script: |
+          set -euo pipefail
+          bash scripts/codemagic-ios.sh "${{ inputs.build_number }}"
+    artifacts:
+      - build-native/ios/ipa/*.ipa
+      - build-native/ios/archive/*.xcarchive
+      - /tmp/xcodebuild_logs/*.log
+  witness-android:
+    name: Witness Android — signed build, no upload
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    inputs:
+      build_number:
+        description: Google Play version code; use a higher whole number for every new upload.
+        type: number
+        default: 1
+    environment:
+      node: 22
+      java: 21
+      android_signing:
+        - witness_upload
+    scripts:
+      - name: Install locked dependencies with Bun
+        script: |
+          set -euo pipefail
+          curl -fsSL https://bun.com/install | bash -s -- bun-v1.3.6
+          "$HOME/.bun/bin/bun" install --frozen-lockfile
+      - name: Install the Android build SDK
+        script: |
+          set -euo pipefail
+          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: Build and verify the signed Android app
+        script: |
+          set -euo pipefail
+          bash scripts/codemagic-android.sh "${{ inputs.build_number }}"
+    artifacts:
+      - android/app/build/outputs/bundle/release/*.aab
+      - android/app/build/outputs/apk/release/*.apk
+      - android/app/build/reports/lint-results-release.*

@@ -1,5 +1,24 @@
 apply plugin: 'com.android.application'
 
+def requestedVersionCode = providers.gradleProperty('witnessVersionCode').getOrElse('1')
+if (!(requestedVersionCode ==~ /[1-9][0-9]{0,9}/) ||
+        requestedVersionCode.toBigInteger() > 2100000000) {
+    throw new GradleException('witnessVersionCode must be a whole number from 1 through 2100000000.')
+}
+def releaseSigning = [
+    storePath: System.getenv('CM_KEYSTORE_PATH'),
+    storePassword: System.getenv('CM_KEYSTORE_PASSWORD'),
+    keyAlias: System.getenv('CM_KEY_ALIAS'),
+    keyPassword: System.getenv('CM_KEY_PASSWORD')
+]
+def hasReleaseSigning = releaseSigning.values().every { it }
+if (releaseSigning.values().any { it } && !hasReleaseSigning) {
+    throw new GradleException('Android signing is incomplete. Configure all four Codemagic keystore variables.')
+}
+if (hasReleaseSigning && !file(releaseSigning.storePath).isFile()) {
+    throw new GradleException('The configured Android upload keystore file is missing.')
+}
+
 android {
     namespace = "com.commonlight.witness"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,7 +26,7 @@ android {
         applicationId "com.commonlight.witness"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
+        versionCode requestedVersionCode.toInteger()
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
@@ -16,8 +35,21 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (hasReleaseSigning) {
+            release {
+                storeFile file(releaseSigning.storePath)
+                storePassword releaseSigning.storePassword
+                keyAlias releaseSigning.keyAlias
+                keyPassword releaseSigning.keyPassword
+            }
+        }
+    }
     buildTypes {
         release {
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

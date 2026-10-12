@@ -8,6 +8,15 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+build-native/
+downloads/
+*.jks
+*.keystore
+*.p12
+*.p8
+*.pem
+*.key
+*.mobileprovision
 dist
 dist-ssr
 .output
