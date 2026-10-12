@@ -1,0 +1,78 @@
+workflows:
+  web-check:
+    name: Web lint and production build
+    max_build_duration: 30
+    instance_type: linux_x2
+    environment:
+      node: 22
+      bun: "1.2.2"
+    triggering:
+      events:
+        - push
+        - pull_request
+    scripts:
+      - name: Install locked dependencies
+        script: bun install --frozen-lockfile
+      - name: Lint
+        script: bun run lint
+      - name: Build web application
+        script: bun run build
+
+  android-debug:
+    name: Android debug APK
+    max_build_duration: 60
+    instance_type: linux_x2
+    environment:
+      node: 22
+      bun: "1.2.2"
+      java: 17
+    triggering:
+      events:
+        - push
+        - pull_request
+    scripts:
+      - name: Install locked dependencies
+        script: bun install --frozen-lockfile
+      - name: Sync Capacitor Android project
+        script: bunx cap sync android
+      - name: Build debug APK
+        script: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+    artifacts:
+      - android/app/build/outputs/apk/debug/*.apk
+
+  ios-simulator:
+    name: iOS Simulator build
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      node: 22
+      bun: "1.2.2"
+      xcode: latest
+    triggering:
+      events:
+        - push
+        - pull_request
+    scripts:
+      - name: Install locked dependencies
+        script: bun install --frozen-lockfile
+      - name: Sync Capacitor iOS project
+        script: bunx cap sync ios
+      - name: Build for iOS Simulator
+        script: |
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -target App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build/ios \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+          ditto -c -k --sequesterRsrc --keepParent \
+            build/ios/Build/Products/Debug-iphonesimulator/App.app \
+            build/ios/App-simulator.zip
+    artifacts:
+      - build/ios/App-simulator.zip
