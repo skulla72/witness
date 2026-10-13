@@ -5,9 +5,9 @@ no upload**. Codemagic supplies the Mac and Xcode. This workflow produces an
 App Store distribution-signed `.ipa` and an Xcode archive, but does not upload
 anything to Apple, submit a review, or release the app.
 
-The configuration is prepared; a real cloud build still requires the accounts
-and signing files below. Local checks on Linux cannot verify Xcode compilation
-or Apple signing.
+The configuration is prepared; a real cloud build still requires the Apple
+connection and protected certificate key below. Local checks on Linux cannot
+verify Xcode compilation or Apple signing.
 
 ## 1. Apple account and app registration
 
@@ -40,32 +40,29 @@ the repository, or this YAML file.
 Review Codemagic's current build allowance and charges before starting a build.
 The workflow uses an M2 Mac runner and has a 60-minute timeout.
 
-## 3. Configure Apple signing securely in Codemagic
+## 3. Automatic Apple signing in Codemagic
 
 No locally owned Mac is required for this setup.
 
 1. In **Team settings → Team integrations → Developer Portal**, add your
    App Store Connect API key: upload the `.p8` file there and enter its Key ID
-   and Issuer ID. Do not send these credentials to the Agent.
-2. Under **Team settings → codemagic.yaml settings → Code signing identities →
-   iOS certificates**, generate an **Apple Distribution** certificate using
-   that integration, or upload an existing distribution certificate and its
-   private key as a password-protected `.p12`.
-   If Codemagic provides a one-time certificate download, save a secure backup
-   and upload it to Code signing identities as their instructions require.
-   Do not revoke existing certificates to make room without understanding what
-   other apps use them.
-3. In Apple's developer website, generate an **App Store Connect distribution**
-   provisioning profile for `com.commonlight.witness`, using the matching
-   Apple Distribution certificate.
-4. In Codemagic's **iOS provisioning profiles**, fetch that profile from the
-   Developer Portal or upload its `.mobileprovision` file.
-5. Confirm that the profile shows a matching certificate. The workflow selects
-   these files by distribution type `app_store` and the bundle identifier.
+   and Issuer ID. Use the display name **Codemagic API Key**, matching the
+   workflow's integration reference. Do not send these credentials to the Agent.
+2. The app's **witness_ios_signing** variable group must contain
+   **CERTIFICATE_PRIVATE_KEY**, marked **Secret**. This is a reusable RSA
+   signing key, not the App Store Connect `.p8` API key.
+   The protected key has been provisioned directly in Codemagic. Keep it there;
+   do not replace or regenerate it for each build.
+3. The build initializes a keychain and uses `app-store-connect
+   fetch-signing-files` to fetch or create an Apple Distribution certificate
+   and matching App Store provisioning profile for **com.commonlight.witness**.
+   It then imports the certificate and applies the profile to the Xcode project.
 
-Connecting only the API key is not enough: the distribution certificate and
-matching provisioning profile must also be available in Code signing identities.
-The workflow fails rather than exporting an unsigned app if signing is missing.
+Manual certificate/profile uploads to Code signing identities are not required
+by this iPhone workflow. The Apple API key needs permission to manage signing
+resources. If Apple rejects creation because its certificate limit is reached,
+the build stops; it never revokes another app's certificates to make room.
+Missing credentials also stop the build instead of producing an unsigned app.
 
 ## 4. Run the first build manually
 
@@ -99,4 +96,5 @@ privacy, and real-device checks before submission.
 
 - [Codemagic Capacitor guide](https://docs.codemagic.io/yaml-quick-start/building-an-ionic-app/)
 - [Codemagic iOS signing identities](https://docs.codemagic.io/yaml-code-signing/signing-ios/)
+- [Codemagic automatic signing](https://docs.codemagic.io/yaml-code-signing/alternative-code-signing-methods/)
 - [Codemagic manual YAML builds](https://docs.codemagic.io/yaml-basic-configuration/yaml-getting-started/)

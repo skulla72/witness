@@ -15,7 +15,7 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
 fi
 
 export PATH="$HOME/.bun/bin:$PATH"
-for tool in node bun xcodebuild xcode-project; do
+for tool in node bun xcodebuild xcode-project keychain app-store-connect; do
   if ! command -v "$tool" >/dev/null 2>&1; then
     echo "Required Codemagic build tool is missing: $tool" >&2
     exit 1
@@ -26,11 +26,28 @@ if [[ ! -d node_modules ]]; then
   echo "Run the locked dependency installation step before the iPhone build." >&2
   exit 1
 fi
+for variable in CERTIFICATE_PRIVATE_KEY APP_STORE_CONNECT_KEY_IDENTIFIER APP_STORE_CONNECT_ISSUER_ID APP_STORE_CONNECT_PRIVATE_KEY; do
+  if [[ -z "${!variable:-}" ]]; then
+    echo "Required protected Apple signing variable is missing: $variable. Check the Developer Portal integration and witness_ios_signing group." >&2
+    exit 1
+  fi
+done
 
 echo "Syncing the existing hosted-site native shell."
 bunx --no-install cap sync ios
 
-echo "Applying signing files from Codemagic's secure signing identities."
+echo "Initializing the build keychain."
+keychain initialize
+
+echo "Fetching or creating Apple App Store signing files for com.commonlight.witness."
+# The protected, reusable certificate key prevents creating a new distribution
+# certificate on each build. Never echo it or regenerate it in this script.
+app-store-connect fetch-signing-files com.commonlight.witness \
+  --type IOS_APP_STORE \
+  --create
+
+echo "Importing the distribution certificate and applying its provisioning profile."
+keychain add-certificates
 xcode-project use-profiles --project ios/App/App.xcodeproj
 
 echo "Resolving Swift Package Manager dependencies."

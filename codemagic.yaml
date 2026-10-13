@@ -1,5 +1,5 @@
 # Manual builds only: no Git triggers and no store publishing configuration.
-# Signing files are selected from Codemagic's secure Code signing identities.
+# iPhone signing files are fetched automatically through the Apple integration.
 workflows:
   witness-ios-check:
     name: Witness iPhone — compile check, simulator only
@@ -37,6 +37,8 @@ workflows:
     name: Witness iPhone — signed build, no upload
     instance_type: mac_mini_m2
     max_build_duration: 60
+    integrations:
+      app_store_connect: "Codemagic API Key"
     inputs:
       build_number:
         description: iOS build number (1–9999); use a higher number for every new Apple upload.
@@ -45,9 +47,8 @@ workflows:
     environment:
       node: 22
       xcode: latest
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.commonlight.witness
+      groups:
+        - witness_ios_signing
     scripts:
       - name: Install locked dependencies with Bun
         script: |
