@@ -86,7 +86,17 @@ workflows:
       - name: Install the Android build SDK
         script: |
           set -euo pipefail
-          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+          export ANDROID_HOME="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/share/android-sdk}}"
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          sdk_manager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [[ ! -x "$sdk_manager" ]]; then
+            echo "Android SDK manager is missing at the configured SDK location." >&2
+            exit 1
+          fi
+          "$sdk_manager" --sdk_root="$ANDROID_HOME" \
+            "platforms;android-36" "build-tools;36.0.0"
+          printf 'ANDROID_HOME=%s\nANDROID_SDK_ROOT=%s\n' \
+            "$ANDROID_HOME" "$ANDROID_SDK_ROOT" >> "$CM_ENV"
       - name: Build and verify the signed Android app
         script: |
           set -euo pipefail
