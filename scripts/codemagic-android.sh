@@ -9,10 +9,42 @@ if [[ ! "$build_number" =~ ^[1-9][0-9]{0,9}$ ]] ||
   exit 2
 fi
 
+# Materialize the encrypted Codemagic secret only for this build, then remove it.
+# Keep supporting an explicitly supplied signing-identity path for local builds.
+if [[ -n "${WITNESS_ANDROID_KEYSTORE_BASE64:-}" ]]; then
+  if [[ -n "${CM_KEYSTORE_PATH:-}" ]]; then
+    echo "Multiple Android signing sources are configured. Select either the protected variable group or a keystore path." >&2
+    exit 1
+  fi
+  if ! command -v python3 >/dev/null 2>&1; then
+    echo "Python 3 is required to restore the protected Android upload key." >&2
+    exit 1
+  fi
+  umask 077
+  prepared_keystore="$(mktemp "${TMPDIR:-/tmp}/witness-upload.XXXXXX")"
+  trap 'rm -f -- "$prepared_keystore"' EXIT
+  export CM_KEYSTORE_PATH="$prepared_keystore"
+  python3 - <<'PY'
+import base64
+import os
+import sys
+try:
+    data = base64.b64decode(os.environ["WITNESS_ANDROID_KEYSTORE_BASE64"], validate=True)
+    if not data:
+        raise ValueError("Empty keystore")
+    with open(os.environ["CM_KEYSTORE_PATH"], "wb") as target:
+        target.write(data)
+except Exception:
+    sys.stderr.write("The protected Android keystore could not be restored.\n")
+    sys.exit(1)
+PY
+  unset WITNESS_ANDROID_KEYSTORE_BASE64
+fi
+
 # Never print signing values or write them into the repository.
 for key in CM_KEYSTORE_PATH CM_KEYSTORE_PASSWORD CM_KEY_ALIAS CM_KEY_PASSWORD; do
   if [[ -z "${!key:-}" ]]; then
-    echo "Missing Android signing configuration: $key. Add witness_upload in Codemagic signing identities." >&2
+    echo "Missing Android signing configuration: $key. Check the protected witness_android_signing variable group or your keystore configuration." >&2
     exit 1
   fi
 done

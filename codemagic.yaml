@@ -75,8 +75,8 @@ workflows:
     environment:
       node: 22
       java: 21
-      android_signing:
-        - witness_upload
+      groups:
+        - witness_android_signing
     scripts:
       - name: Install locked dependencies with Bun
         script: |

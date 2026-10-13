@@ -8,17 +8,22 @@ It does not upload to Google Play or release the app.
 
 1. Connect the GitHub repository and select the branch containing
    `codemagic.yaml`.
-2. In Codemagic, open **Team settings → codemagic.yaml settings → Code signing
-   identities → Android keystores**.
-3. Upload the app's **upload keystore**, enter its passwords and alias directly
-   in Codemagic, and set the reference name to **`witness_upload`**.
-4. Store a separate secure backup of the keystore and passwords. Codemagic does
-   not let you download the uploaded keystore later.
+2. The **witness_android_signing** variable group contains the reusable upload
+   keystore and credentials. All four variables must be marked **Secret**:
+   `WITNESS_ANDROID_KEYSTORE_BASE64`, `CM_KEYSTORE_PASSWORD`, `CM_KEY_ALIAS`,
+   and `CM_KEY_PASSWORD`.
+3. The first upload key has been generated and stored encrypted in Codemagic.
+   The workflow restores it to a restricted temporary file, signs the build,
+   and removes that file when the build exits. Do not regenerate the key for
+   later versions or delete its protected variable group.
+4. Before store submission, arrange an independent secure backup of the
+   keystore and passwords through a secure administrator process. Never
+   transfer private signing files or passwords through chat or the repository.
 
 If Google Play already has an upload certificate for this app, reuse the
 matching upload key. Do not generate a replacement without following Google's
-upload-key reset process. If this is the first release and no upload key exists,
-create it with Android Studio or Java Keytool on a computer you control.
+upload-key reset process. Before the first upload, confirm that this app has
+no different registered upload certificate in the intended developer account.
 Do not use the debug test key for a store release.
 
 Never send signing keys or passwords in chat, commit them, or add them to YAML.
@@ -56,7 +61,8 @@ Connecting GitHub to Codemagic does not give this Agent Codemagic API access.
 To let the Agent inspect the app connection and run/monitor builds, add
 `CODEMAGIC_API_TOKEN` through Replit's secure Secrets flow. The token is found in
 Codemagic **Account settings → API token**. Do not paste it in chat.
-Apple and Android signing files should remain in Codemagic's signing identities.
+Signing credentials should remain encrypted in Codemagic; this Android workflow
+uses its protected variable group, not Code signing identities.
 
 ## Official guide
 
