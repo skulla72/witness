@@ -127,3 +127,46 @@ Official configuration references:
 https://docs.codemagic.io/rest-api/builds/
 https://docs.codemagic.io/yaml-publishing/app-store-connect/
 https://github.com/codemagic-ci-cd/cli-tools/blob/master/docs/app-store-connect/fetch-signing-files.md
+
+## Independent unsigned iPhone simulator compilation
+
+- Workflow: `witness-ios-check`, on the same isolated release branch.
+- Exact tested remote revision:
+  `37f842ec37b4b0f02cfba8e7ff2a1bad53fd0b3e`.
+  This is the reconciled application snapshot plus the signing-attempt
+  evidence-only update; no later application changes are implied.
+- Cloud start request: HTTP 200.
+- Build ID: `6ad729a1f12088b7d940152e`.
+- Started `2026-10-20T08:43:21.883Z`.
+- Remote workflow was checked before launch: `CODE_SIGNING_ALLOWED=NO`,
+  Debug, iPhone Simulator SDK, no Apple integration, no signing-variable
+  group and no publishing configuration.
+- **Final result: finished / successful.** Finished
+  `2026-10-20T08:45:28.696Z` (approximately 2 minutes 7 seconds).
+- Source fetch, locked dependency installation, simulator compilation and
+  artifact collection all succeeded. No application/native repair or rerun
+  was needed, and no unchanged local test suite was repeated.
+- Actual artifact: **Witness-iOS-simulator.zip**, from
+  `build-native/Witness-iOS-simulator.zip`, **3,705,567 bytes**.
+  Authenticated build metadata lists it, and the artifact endpoint's HEAD
+  returned **HTTP 200**, `application/zip`, matching Content-Length.
+  The archive was not installed/run or copied into the repository.
+- Authenticated nested command logs were retrieved with HTTP 200:
+  - Locked dependencies: 3,585 bytes,
+    SHA-256 `bfa1805dc66b02eb84d4b4a42936defaebe1a5ab64200e5e3d479c169a1d7762`.
+  - Native compile: 725,129 bytes,
+    SHA-256 `73507f385461b9cf79021b8a4ba2f51a234d803b3f2a6fcac22f0410fe38f608`.
+    Confirms resolved Swift packages, simulator SDK compilation and
+    **`** BUILD SUCCEEDED **`**, with zero `error:` lines.
+  - Logs and archive are retained with this Codemagic build. No credential
+    bodies or signed download/log URLs are copied into this document.
+- Six warning lines remain: five repeated asset-catalog warnings that
+  the Splash image set has three unassigned children, and one AppIntents
+  metadata extraction skip because no AppIntents.framework dependency exists.
+  Neither failed compilation; no unrelated branding/framework change made.
+- Apple post-processing tasks: **zero**. No signing, TestFlight upload,
+  account action, website deployment or public release was performed.
+- This independent compile cannot validate distribution signing, device
+  entitlements, native runtime behavior, TestFlight upload or Apple processing.
+- The earlier signed-build Apple HTTP 401 remains a separate blocker pending
+  owner correction. Simulator success does not establish it has changed.
