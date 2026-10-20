@@ -7,7 +7,7 @@ const release = workflows["witness-ios-testflight"];
 const script = readFileSync("scripts/codemagic-ios.sh", "utf8");
 
 test("TestFlight uses the existing integration and never submits publicly or invites testers", () => {
-  expect(release.integrations.app_store_connect).toBe("Codemagic API Key");
+  expect(release.integrations.app_store_connect).toBe("Witness Codemagic Edge");
   expect(release.environment.groups).toEqual(["witness_ios_signing"]);
   expect(release.publishing.app_store_connect).toEqual({
     auth: "integration",
@@ -19,11 +19,16 @@ test("TestFlight uses the existing integration and never submits publicly or inv
   expect(workflows["witness-android"].publishing).toBeUndefined();
 });
 
-test("authorization preflight precedes installation and does not create credentials", () => {
+test("read-only authorization precedes opt-in reusable signing setup", () => {
   const preflight = release.scripts[0].script;
-  expect(preflight).toContain("fetch-signing-files com.commonlight.witness");
-  expect(preflight).toContain("--strict-match-identifier");
+  expect(preflight).toContain("python3 scripts/apple-release-preflight.py");
   expect(preflight).not.toMatch(/--create\b|--delete-stale-profiles\b/);
+  const signing = release.scripts[1].script;
+  expect(signing).toContain("fetch-signing-files com.commonlight.witness");
+  expect(signing).toContain("--strict-match-identifier");
+  expect(signing).toContain('1) extra=(--create)');
+  expect(release.inputs.prepare_signing.default).toBe(0);
+  expect(signing).not.toContain("--delete-stale-profiles");
   expect(script).not.toMatch(/--create\b|--delete-stale-profiles\b|openssl.*gen/i);
   expect(script).toContain("--type IOS_APP_STORE");
   expect(script).toContain("CURRENT_PROJECT_VERSION=$build_number");

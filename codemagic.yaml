@@ -38,7 +38,7 @@ workflows:
     instance_type: mac_mini_m2
     max_build_duration: 60
     integrations:
-      app_store_connect: "Codemagic API Key"
+      app_store_connect: "Witness Codemagic Edge"
     inputs:
       build_number:
         description: iOS build number (1–9999); use a higher number for every new Apple upload.
@@ -68,7 +68,12 @@ workflows:
     instance_type: mac_mini_m2
     max_build_duration: 60
     integrations:
-      app_store_connect: "Codemagic API Key"
+      app_store_connect: "Witness Codemagic Edge"
+    inputs:
+      prepare_signing:
+        description: One-time missing certificate/profile setup using the existing protected key (0=no, 1=yes).
+        type: number
+        default: 0
     environment:
       node: 22
       xcode: latest
@@ -78,13 +83,25 @@ workflows:
         # Separate from the old build-1 workflow. Apple rejects duplicates.
         WITNESS_IOS_BUILD_NUMBER: "1020"
     scripts:
-      - name: Check existing Apple authorization and signing assets first
+      - name: Verify Apple access before signing setup
         script: |
           set -euo pipefail
-          # Read/download existing resources only. Never create a key,
-          # certificate, bundle ID or provisioning profile.
+          python3 scripts/apple-release-preflight.py
+      - name: Reuse signing assets and optionally prepare missing assets
+        script: |
+          set -euo pipefail
+          prepare="${{ inputs.prepare_signing }}"
+          case "$prepare" in
+            0) extra=() ;;
+            1) extra=(--create) ;;
+            *) echo "prepare_signing must be 0 or 1." >&2; exit 2 ;;
+          esac
+          # Preflight has established that the exact bundle already exists.
+          # Reuse the protected key; create only missing matching signing assets.
+          # Never generate API/private keys or delete/revoke existing resources.
+          test -n "${CERTIFICATE_PRIVATE_KEY:-}"
           app-store-connect fetch-signing-files com.commonlight.witness \
-            --type IOS_APP_STORE --strict-match-identifier
+            --type IOS_APP_STORE --strict-match-identifier "${extra[@]}"
       - name: Install locked dependencies with Bun
         script: |
           set -euo pipefail
