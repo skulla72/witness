@@ -213,3 +213,58 @@ a signed cloud build and TestFlight upload, but not public release.
   processing must each be evidenced separately; queued is not success.
 - Native destination remains `https://witnessmovement.com`; unpublished Replit
   web repairs are not thereby deployed or included in the hosted content.
+
+### Signed build and accepted upload — verified result
+
+- Build `6ad771bd454d2506f7ab7541`: **finished / success**.
+  Started `2026-10-20T13:53:10.968Z`, finished
+  `2026-10-20T13:56:58.395Z`.
+- All script stages passed, including actual read-only Apple authentication
+  and the app/bundle/push/unused-build-number checks.
+- Apple signing setup found no distribution certificate/profile initially.
+  It created one Apple Distribution certificate `C8NX696567` for Common Light LLC
+  using the existing protected signing key, and one IOS_APP_STORE profile
+  `RC3VDX866S` for the existing bundle. The subsequent fetch-only build stage
+  reused those assets. No API keys/private signing keys were generated or
+  exported; nothing was revoked/deleted.
+- Actual archive invocation used `DEVELOPMENT_TEAM=WHX22LZ4GC`,
+  `CODE_SIGN_IDENTITY=Apple Distribution`, Release/manual provisioning.
+  Logs confirm successful archive creation and IPA export.
+- Actual artifact **App.ipa**, **2,237,891 bytes**, version **1.0 (1020)**.
+  Authenticated artifact retrieval returned **HTTP 200**; SHA-256:
+  `796ca78a6d5727256258b0af601214cbfe829817cf18cc56d834ec1a2d17715a`.
+  Artifact was inspected in memory only, not copied into source or installed.
+- IPA Info.plist confirms `com.commonlight.witness`, version `1.0`,
+  build `1020`, minimum iOS `15.0`. Its embedded distribution profile confirms
+  team `WHX22LZ4GC`, application identifier
+  `WHX22LZ4GC.com.commonlight.witness`, `aps-environment=production`,
+  `get-task-allow=false`, expiration `2027-10-20T13:43:53Z`.
+  This metadata inspection is not an independent macOS codesign/device test.
+- Additional cloud artifact: **witness_2_artifacts.zip**, **6,340,930 bytes**.
+- Actual publishing log confirms upload to App Store Connect and
+  **`UPLOAD SUCCEEDED with no errors`**, timestamp `2026-10-20T13:56:57.208`.
+  Publishing-log SHA-256:
+  `1eb2541d8f5fcb62f9e9367914911e3a8ebb39c7e024726ce50ad630bbfcd2da`.
+- No external beta review, tester invitations or public App Store submission
+  were requested. Upload acceptance alone does not establish Apple processing
+  or availability to an assigned internal tester.
+
+### Separate read-only Apple processing verification
+
+- The upload build exposes no App Store Connect post-processing task/status.
+  The protected Apple integration is available only inside Codemagic runners,
+  not as an exportable key in this workspace. Credentials are not extracted.
+- A sequential metadata-only workflow, `witness-ios-processing-check`, reads
+  the exact app/build using the supported CLI and, when VALID, beta details.
+  No signing group, installation, compilation, upload/publishing configuration,
+  resource creation, account action or compliance-setting mutation is enabled.
+- Exact verification source: `0015337f39367db5bec7c493a1160e0432a32e36`.
+- Verification job: **`6ad773ae454d2506f7ab75fa`**; start HTTP **202**.
+  At submission: queued, after the signed build had completed. No competing
+  job was present. Processing/TestFlight status remains pending this result.
+- After adding this read-only workflow, focused Bun release/native checks:
+  **10 passed, 0 failed, 63 assertions**. One additional synthetic processing
+  check passed with mocked Apple transport, including the missing-export-
+  compliance state. It did not contact Apple.
+- No web behavior changed; existing TypeScript/application build results were
+  not invalidated or rerun by these runner-only additions.
