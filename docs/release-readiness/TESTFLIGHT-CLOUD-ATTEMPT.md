@@ -170,3 +170,46 @@ https://github.com/codemagic-ci-cd/cli-tools/blob/master/docs/app-store-connect/
   entitlements, native runtime behavior, TestFlight upload or Apple processing.
 - The earlier signed-build Apple HTTP 401 remains a separate blocker pending
   owner correction. Simulator success does not establish it has changed.
+
+## Owner-approved Apple connection replacement and signed attempt
+
+The owner supplied the saved connection name **Witness Codemagic Edge** and
+public key identifier `6C34DHH7Q2`, authorizing reusable signing preparation,
+a signed cloud build and TestFlight upload, but not public release.
+
+- Local preparation parent: `838a8a9ba03ec3df353dad76153eaabaf980bd51`.
+- Isolated remote parent: `5bdf90553fd108268bde0846305f9892277d371c`.
+- Exact submitted remote source: `788e57c48b855a47b105a7bcaedac2f39bdd4292`.
+  Only four reviewed files changed remotely: `codemagic.yaml`,
+  `scripts/apple-release-preflight.py`, `tests/ios-cloud-release.test.ts`,
+  and `tests/test_apple_release_preflight.py`. Uploaded blob hashes matched.
+  Earlier reconciled repairs remain inherited; main and public website unchanged.
+- Both signed workflows now select the owner-approved connection. The unsigned
+  simulator and Android workflows remain unchanged.
+- TestFlight starts with read-only Apple app/bundle/capability/build-number
+  checks. The selected public key identifier, exact app `6824878398`, exact
+  existing bundle `com.commonlight.witness`, push capability and unused build
+  number must pass before signing setup. Raw CLI responses/errors are not logged
+  by this preflight; only fixed success messages or sanitized errors are emitted.
+- `prepare_signing` defaults to `0` (fetch existing). This authorized attempt
+  explicitly uses `1`: Codemagic's documented `fetch-signing-files --create`
+  reuses the existing protected certificate key and creates missing matching
+  certificate/profile resources only after preflight. No key generation,
+  certificate revocation, stale-profile deletion or API-key creation is enabled.
+  The existing build script still fetches existing assets only.
+- Local checks for these configuration-only changes:
+  - Bun: **9 passed, 0 failed, 56 assertions**, two release/native packaging files.
+  - Python preflight synthetic tests: **8 passed, 0 failed**; no Apple requests
+    or real credentials used. Includes wrong key/app, missing bundle/push,
+    duplicate build, safe error redaction and successful read-only sequence.
+  - TypeScript `--noEmit --incremental false`: passed.
+  - Bash syntax and `git diff --check`: passed.
+  - Unchanged application suites/web build were not repeated.
+- Codemagic v3 start request: **HTTP 202**.
+- Single signed attempt: **`6ad771bd454d2506f7ab7541`**,
+  workflow `witness-ios-testflight`, build number `1020`.
+- At submission: queued; no active competing build was present. Apple
+  authentication, reusable signing creation, signed IPA, upload and Apple
+  processing must each be evidenced separately; queued is not success.
+- Native destination remains `https://witnessmovement.com`; unpublished Replit
+  web repairs are not thereby deployed or included in the hosted content.
