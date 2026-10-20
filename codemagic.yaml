@@ -1,6 +1,22 @@
 # Manual builds only: no Git triggers. Only witness-ios-testflight uploads.
 # iPhone signing files are fetched automatically through the Apple integration.
 workflows:
+  witness-ios-processing-check:
+    name: Witness iPhone — read-only Apple processing check
+    instance_type: mac_mini_m2
+    max_build_duration: 15
+    integrations:
+      app_store_connect: "Witness Codemagic Edge"
+    environment:
+      vars:
+        WITNESS_IOS_BUILD_NUMBER: "1020"
+    scripts:
+      - name: Read uploaded build processing and TestFlight state
+        script: |
+          set -euo pipefail
+          python3 scripts/apple-processing-check.py
+    artifacts:
+      - build-native/apple-processing.json
   witness-ios-check:
     name: Witness iPhone — compile check, simulator only
     instance_type: mac_mini_m2

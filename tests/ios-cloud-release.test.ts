@@ -41,3 +41,15 @@ test("production content destination and native identity are unchanged", () => {
   expect(config).toContain("url: 'https://witnessmovement.com'");
   expect(config).toContain("cleartext: false");
 });
+
+test("Apple processing verification cannot compile, upload, invite or create resources", () => {
+  const check = workflows["witness-ios-processing-check"];
+  expect(check.integrations.app_store_connect).toBe("Witness Codemagic Edge");
+  expect(check.publishing).toBeUndefined();
+  expect(check.environment.groups).toBeUndefined();
+  expect(check.scripts).toHaveLength(1);
+  const processing = readFileSync("scripts/apple-processing-check.py", "utf8");
+  expect(processing).toContain('"builds", "list"');
+  expect(processing).toContain('"builds", "beta-details"');
+  expect(processing).not.toMatch(/--create|fetch-signing-files|publish|submit-to|expire-build|keychain/);
+});
