@@ -55,6 +55,75 @@ No public website deployment is authorized by this attempt.
 
 ## Cloud and Apple evidence
 
-Pending execution. This section must be updated with the exact remote source
-revision, cloud build ID/status, signed artifact result and Apple processing
-status. Do not label TestFlight ready based on configuration or local tests.
+- Local prepared source: `089582c4779ee389a7fbc80d8c441705f1c88ff8`.
+- Remote release source: `1223bcb93d53cb78e43d17449689d71605dc0f8b`.
+- All 137 transferred source/document/test entries were verified against
+  local Git blob hashes and executable modes: zero mismatches.
+- GitHub main remained `02832e5d5fd25441f4e034bbf5ed73f8364831ee`.
+- Codemagic start API: HTTP 200, build `6ad7285cadf48078c5756117`.
+- Final cloud status: **failed**, for that exact remote release commit.
+- Started `2026-10-20T08:37:56.327Z`; finished
+  `2026-10-20T08:38:42.082Z`.
+- Build machine preparation and source fetch succeeded. The first existing
+  Apple signing-assets preflight failed; dependency installation and signed
+  compilation were skipped. There are **zero artifacts and zero Apple
+  post-processing tasks**. The generic Publishing action's success status
+  is a no-op here and is not evidence of upload.
+- Authenticated retrieval of the failed command's nested log succeeded.
+  Apple bundle-ID request returned **HTTP 401**, with the standard error:
+  **"Authentication credentials are missing or invalid."**
+  **"Provide a properly configured and signed bearer token, and make sure
+  that it has not expired."**
+- The first log retrieval without the Codemagic API header also returned
+  401; that separate log-access failure was resolved. The Apple 401 above
+  was then confirmed from the retrieved command output.
+- Signed IPA: **not produced**. TestFlight upload: **not performed**.
+  Apple processing and iPhone installation: **not reached/unverified**.
+- No repeated cloud run was started after this authorization failure.
+
+## Exact owner-only unblock
+
+1. Sign into the Codemagic team owning the Witness application. Open
+   **Team settings → Team integrations → Developer Portal → Manage keys**,
+   and inspect **Codemagic API Key**.
+2. In the matching Apple account, open **App Store Connect → Users and
+   Access → Integrations → App Store Connect API**. Confirm the saved existing
+   key is active and its key ID and issuer correspond to the same intended
+   team. Confirm that team owns `com.commonlight.witness` and the Witness
+   App Store Connect app record. Re-save the existing matching key securely
+   in Codemagic if its current saved selection/material is wrong. Do not
+   paste credentials in chat or source, create a new key, or revoke anything.
+3. Confirm the existing authorization permits distribution signing resource
+   reads and App Store Connect upload (Codemagic documents App Manager for
+   publishing), and that the existing reusable signing key/profile supports
+   the requested distribution/push entitlements. Do not weaken permissions
+   or generate replacements to bypass this check.
+4. If the matching existing private key is unavailable or revoked, stop and
+   report that fact: new credential creation was not authorized.
+5. After owner correction, repeat the isolated workflow once. A successful
+   preflight is still not a signed build or processed TestFlight result.
+
+The API/log evidence does not distinguish a mismatched/revoked key, wrong
+issuer/team selection, malformed signing material or another token-authentication
+problem. No supported standalone Codemagic Developer Portal validation API was
+established. The current integration cannot be repaired using the available
+Codemagic token alone without owner access to its secure configuration.
+
+## Remaining proof without a personal Mac
+
+- Existing Apple authorization must pass; existing certificate/profile must
+  produce a signed IPA from the recorded release source.
+- App Store Connect must accept the upload and finish processing it. Upload
+  status alone is insufficient. If required, the owner must finish export
+  compliance/app-record information and add themselves as an internal tester
+  in App Store Connect → Witness → TestFlight, without a public App Store release.
+- An iPhone installation must verify the production-hosted content, native
+  recovery, push and auth/session behavior. Managed native social handoff is
+  still unverified/unsupported in this copy; a signed shell does not fix it.
+- Local web repairs remain unpublished; no claim is made that the live
+  website contains the October 18 changes.
+
+Official configuration references:
+https://docs.codemagic.io/rest-api/builds/
+https://docs.codemagic.io/yaml-publishing/app-store-connect/
+https://github.com/codemagic-ci-cd/cli-tools/blob/master/docs/app-store-connect/fetch-signing-files.md
