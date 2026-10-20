@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { checkoutAccount, checkoutRefusal } from "./checkout-eligibility.server";
 import { assertReturnUrl } from "@/lib/returnUrl";
 import {
   type StripeEnv,
@@ -39,10 +40,9 @@ export const chipInToJob = createServerFn({ method: "POST" })
     return data;
   })
   .handler(async ({ data }): Promise<ChipInResult> => {
+    let userId: string;
+    try { userId = await checkoutAccount(); } catch (error) { return checkoutRefusal(error); }
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { getOptionalUserId } = await import("@/lib/optional-auth.server");
-    const userId = await getOptionalUserId();
-    if (!userId) return { error: "Please sign in to give." };
 
     const { data: fund } = await supabaseAdmin
       .from("job_funds")

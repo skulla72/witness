@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { Play, Pause, Mic } from "lucide-react";
 import { useSignedUrl } from "@/hooks/useSignedUrl";
 import { fmtSeconds } from "@/components/media/VoiceRecorder";
+import { MediaLoadError } from "./MediaLoadError";
 
 /**
  * A spoken prayer laid over the photo or tone it was recorded on.
@@ -10,14 +11,19 @@ import { fmtSeconds } from "@/components/media/VoiceRecorder";
 export function VoicePrayer({
   path, backdropPath, bg, caption, seconds, className = "", compact = false,
 }: { path: string; backdropPath: string | null; bg: string | null; caption?: string; seconds?: number | null; className?: string; compact?: boolean }) {
-  const { url } = useSignedUrl(path);
-  const { url: photo } = useSignedUrl(backdropPath);
+  const audio = useSignedUrl(path);
+  const backdrop = useSignedUrl(backdropPath);
+  const { url } = audio;
+  const { url: photo } = backdrop;
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [time, setTime] = useState(0);
 
-  useEffect(() => () => { audioRef.current?.pause(); }, []);
+  useEffect(() => {
+    setPlaying(false); setProgress(0); setTime(0);
+    return () => { audioRef.current?.pause(); };
+  }, [url]);
 
   const total = (() => {
     const d = audioRef.current?.duration;
@@ -50,9 +56,10 @@ export function VoicePrayer({
       className={`relative overflow-hidden ${className}`}
       style={onPhoto ? undefined : { background: `radial-gradient(circle at 50% 25%, ${tone}, color-mix(in oklch, ${tone} 78%, black))` }}
     >
-      {onPhoto && <img src={photo!} alt="" className="absolute inset-0 h-full w-full object-cover" />}
+      {(audio.error || backdrop.error) && <MediaLoadError retry={() => { if (audio.error) audio.retry(); if (backdrop.error) backdrop.retry(); }} className="relative z-10" />}
+      {onPhoto && <img src={photo!} onError={backdrop.onError} alt="" className="absolute inset-0 h-full w-full object-cover" />}
       {onPhoto && <div className="absolute inset-0 bg-gradient-to-b from-ink/20 via-ink/30 to-ink/80" />}
-      {url && <audio ref={audioRef} src={url} preload="metadata" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => { setPlaying(false); setProgress(0); setTime(0); }} onTimeUpdate={onTime} onLoadedMetadata={onTime} />}
+      {url && <audio ref={audioRef} src={url} onError={audio.onError} preload="metadata" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => { setPlaying(false); setProgress(0); setTime(0); }} onTimeUpdate={onTime} onLoadedMetadata={onTime} />}
 
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6">
         <button

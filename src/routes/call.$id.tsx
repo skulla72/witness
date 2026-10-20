@@ -4,6 +4,7 @@ import { useSession } from "@/hooks/useSession";
 import { supabase } from "@/integrations/supabase/client";
 import { personName, sendMessage, threadPeople, type ThreadPerson } from "@/lib/messaging";
 import { Mic, MicOff, Video, VideoOff, PhoneOff, Lock } from "lucide-react";
+import { admitCall } from "@/lib/call-admission.functions";
 
 type CallKind = "audio" | "video";
 type CallRole = "start" | "answer";
@@ -40,6 +41,30 @@ type Signal =
   | { type: "ice"; candidate: RTCIceCandidateInit };
 
 function CallScreen() {
+  const { id } = Route.useParams();
+  const { callId } = Route.useSearch();
+  const { userId } = useSession();
+  const key = `${userId ?? ""}:${id}:${callId ?? ""}`;
+  const [attempt, setAttempt] = useState(0);
+  const [admission, setAdmission] = useState<{ key: string; error?: string } | null>(null);
+  useEffect(() => {
+    let live = true;
+    setAdmission(null);
+    if (userId) void admitCall({ data: { conversationId: id, callId, accountId: userId } })
+      .then(result => { if (live) setAdmission({ key, ...("error" in result ? { error: result.error } : {}) }); })
+      .catch(() => { if (live) setAdmission({ key, error: "Call admission could not be checked. Retry; no media or signaling was opened." }); });
+    return () => { live = false; };
+  }, [key, userId, id, callId, attempt]);
+  if (admission?.key !== key || admission.error) return <main className="mx-auto max-w-lg space-y-4 p-8">
+    <h1 className="font-serif text-2xl">Checking call access</h1>
+    <p role={admission?.error ? "alert" : "status"}>{admission?.error ?? "Establishing room membership and care eligibility before opening media."}</p>
+    <button className="underline" onClick={() => setAttempt(value => value + 1)}>Retry access check</button>
+    <p><a href="/account-controls" className="underline">Cancel sessions / recurring payments</a></p>
+  </main>;
+  return <AdmittedCallScreen key={key} />;
+}
+
+function AdmittedCallScreen() {
   const { id } = Route.useParams();
   const { kind, callId: incomingCallId, role } = Route.useSearch();
   const { userId, signedIn } = useSession();

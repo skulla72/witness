@@ -5,6 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { loadAuthors, type Author } from "@/lib/prayers";
 import { openDirectThread } from "@/lib/messaging";
+import { requireAge, ADULT_CARE_AGE } from "@/lib/launch-policy";
+import { requireAdultClient, requireEligibleActor } from "@/lib/eligibility-client";
+import { authorizeCareSession } from "@/lib/eligibility";
 
 export type Therapist = Tables<"therapists">;
 export type Slot = Tables<"therapy_slots">;
@@ -39,7 +42,10 @@ export async function agreementSigned(party: Party): Promise<boolean> {
   return !!data;
 }
 
-export async function signAgreement(userId: string, party: Party, typedName: string): Promise<void> {
+export async function signAgreement(userId: string, party: Party, typedName: string, age?: unknown): Promise<void> {
+  if (party !== "client" && party !== "therapist") throw new Error("Invalid care agreement party.");
+  if (party === "client") requireAge(age, ADULT_CARE_AGE);
+  await requireAdultClient(userId);
   const version = await agreementVersion();
   const { error } = await supabase.from("therapy_agreements").insert({
     user_id: userId,
@@ -95,6 +101,7 @@ export async function saveListing(userId: string, input: {
   bio: string;
   accepting: boolean;
 }): Promise<void> {
+  await requireAdultClient(userId);
   const { error } = await supabase.from("therapists").upsert(
     { user_id: userId, ...input },
     { onConflict: "user_id" },
@@ -139,7 +146,10 @@ export async function bookSlot(
   userId: string,
   slot: Slot,
   reason: string,
+  age?: unknown,
 ): Promise<{ id?: string; error?: string }> {
+  requireAge(age, ADULT_CARE_AGE);
+  await requireAdultClient(userId);
   const { data, error } = await supabase
     .from("therapy_sessions")
     .insert({
@@ -171,10 +181,19 @@ function friendly(message?: string): string {
 export async function startSession(
   session: Session,
   userId: string,
+  age?: unknown,
 ): Promise<{ conversationId?: string; error?: string }> {
-  let conversationId = session.conversation_id ?? undefined;
+  if (session.client_id === userId) requireAge(age, ADULT_CARE_AGE);
+  const actor = await requireEligibleActor(userId);
+  const actual = await authorizeCareSession(actor, session.id, async id => {
+    const { data, error } = await supabase.from("therapy_sessions").select("*").eq("id", id).maybeSingle();
+    if (error) throw new Error("Could not establish this session's actual client.");
+    return data;
+  });
+  if (actual.client_id === actor.id) requireAge(age, ADULT_CARE_AGE);
+  let conversationId = actual.conversation_id ?? undefined;
   if (!conversationId) {
-    const other = session.client_id === userId ? session.therapist_id : session.client_id;
+    const other = actual.client_id === actor.id ? actual.therapist_id : actual.client_id;
     const thread = await openDirectThread(userId, other);
     if (thread.error || !thread.id) return { error: thread.error ?? "Could not open the room." };
     conversationId = thread.id;
@@ -183,12 +202,14 @@ export async function startSession(
   const { error } = await supabase
     .from("therapy_sessions")
     .update({ status: "in_progress", conversation_id: conversationId })
-    .eq("id", session.id);
+    .eq("id", actual.id);
   if (error) return { error: friendly(error.message) };
   return { conversationId };
 }
 
 export async function setSessionStatus(id: string, status: "completed" | "cancelled" | "no_show"): Promise<void> {
+  // A runtime caller must not bypass startSession by casting "in_progress".
+  if (!["completed", "cancelled", "no_show"].includes(status)) throw new Error("Use the guarded session-start flow; this action cannot start a session.");
   const patch = { status, ...(status === "completed" ? { ended_at: new Date().toISOString() } : {}) };
   const { error } = await supabase.from("therapy_sessions").update(patch).eq("id", id);
 
@@ -209,6 +230,7 @@ export async function myOpenTimes(userId: string): Promise<Slot[]> {
 }
 
 export async function addSlot(userId: string, startsAt: string, minutes: number): Promise<{ error?: string }> {
+  await requireAdultClient(userId);
   const { error } = await supabase
     .from("therapy_slots")
     .insert({ therapist_id: userId, starts_at: new Date(startsAt).toISOString(), minutes });

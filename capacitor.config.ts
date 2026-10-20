@@ -13,6 +13,7 @@ const config: CapacitorConfig = {
   webDir: 'mobile/webroot',
   server: {
     url: 'https://witnessmovement.com',
+    errorPath: 'index.html',
     hostname: 'witnessmovement.com',
     androidScheme: 'https',
     cleartext: false,

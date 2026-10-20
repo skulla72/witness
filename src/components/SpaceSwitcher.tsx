@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import { useAppSpace, type AppSpace } from "@/hooks/useAppSpace";
 import { useSession } from "@/hooks/useSession";
 import { supabase } from "@/integrations/supabase/client";
+import { signOutWitness } from "@/lib/sign-out";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
 type SwitchableIdentity = {
@@ -109,7 +111,8 @@ export function SpaceSwitcher({ compact = false }: { compact?: boolean }) {
   const signOut = async () => {
     setOpen(false);
     setSpace("personal");
-    await supabase.auth.signOut();
+    try { await signOutWitness(); }
+    catch (error) { toast.error(error instanceof Error ? error.message : "Could not sign out."); return; }
     queryClient.clear();
     void navigate({ to: "/login" });
   };

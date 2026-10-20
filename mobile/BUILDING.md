@@ -12,9 +12,10 @@ Publishing changes to a different website will not update these shells.
 - Increase the Android version code and iOS build number before each new store upload.
 - Verify the live website's sign-in and saved prayers on real devices.
 
-Google sign-in currently requires a Google Web OAuth client ID and secret in
-the connected Supabase project's Google provider settings. A build does not
-resolve this configuration error. Do not put provider secrets in source code.
+Google/Apple sign-in uses Lovable's managed broker on supported website origins;
+manual Supabase provider secrets are not prerequisites. The installed SDK does
+not document a custom Capacitor handoff, so native social login is not ready.
+Do not replace managed Apple mode or use direct Supabase OAuth as a fallback.
 
 ## Android
 

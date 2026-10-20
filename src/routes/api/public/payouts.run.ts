@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { timingSafeEqual } from "crypto";
+import { checkScheduledCredential } from "@/lib/cron-rotation.server";
 import type { StripeEnv } from "@/lib/stripe.server";
 
 /**
@@ -7,19 +7,8 @@ import type { StripeEnv } from "@/lib/stripe.server";
  * finished payout account. Anything not yet set up simply waits.
  */
 async function run(request: Request): Promise<Response> {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const presented = request.headers.get("x-payout-key") ?? "";
-  const { data: keyRow } = await supabaseAdmin
-    .from("reminder_cron_key")
-    .select("key")
-    .order("id")
-    .limit(1)
-    .maybeSingle();
-  const expected = keyRow?.key ?? "";
-  const ok =
-    presented.length === expected.length &&
-    expected.length > 0 &&
-    timingSafeEqual(Buffer.from(presented), Buffer.from(expected));
+  const ok = await checkScheduledCredential(presented);
   if (!ok) return new Response("Unauthorized", { status: 401 });
 
   const { runDuePayouts, isConnectUnavailable } = await import("@/lib/payouts.server");

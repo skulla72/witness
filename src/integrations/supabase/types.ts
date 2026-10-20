@@ -4367,6 +4367,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      witness_delete_account: {
+        Args: { target_user: string; preflight: boolean }
+        Returns: boolean
+      }
       grants_for_org_public: {
         Args: { _org_id: string }
         Returns: {

@@ -7,6 +7,8 @@ import { BRAND } from "@/config/brand";
 import { useSession } from "@/hooks/useSession";
 import { Avatar } from "@/components/Avatar";
 import { AgreementGate } from "@/components/therapy/AgreementGate";
+import { AdultCareAge } from "@/components/AdultCareAge";
+import { isAdultCareAge } from "@/lib/launch-policy";
 import {
   acceptingTherapists,
   addSlot,
@@ -42,6 +44,7 @@ const WHEN = new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short"
 
 function TherapyHome() {
   const { userId, signedIn } = useSession();
+  const [careAge, setCareAge] = useState("");
   const qc = useQueryClient();
 
   const signedQ = useQuery({ queryKey: ["therapy-signed", "client", userId], queryFn: () => agreementSigned("client"), enabled: !!userId });
@@ -87,10 +90,12 @@ function TherapyHome() {
 
       {signedQ.data === false && (
         <div className="mt-5">
+          <AdultCareAge value={careAge} onChange={setCareAge} />
           <AgreementGate
             party="client"
+            disabled={!isAdultCareAge(careAge)}
             onSign={async name => {
-              await signAgreement(userId!, "client", name);
+              await signAgreement(userId!, "client", name, careAge);
               await qc.invalidateQueries({ queryKey: ["therapy-signed"] });
               toast.success("Signed. You can book a session now.");
             }}
@@ -190,21 +195,25 @@ function TherapistBooking({
   const [picked, setPicked] = useState<Slot | null>(null);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
+  const [careAge, setCareAge] = useState("");
 
   const book = async () => {
     if (!picked || !userId) return;
     setBusy(true);
-    const result = await bookSlot(userId, picked, reason);
-    setBusy(false);
-    if (result.error) {
-      toast.error(result.error);
-      return;
-    }
-    setPicked(null);
-    setReason("");
-    onBooked();
-    toast.success("Session booked.");
-    if (result.id) navigate({ to: "/therapy/$id", params: { id: result.id } });
+    try {
+      const result = await bookSlot(userId, picked, reason, careAge);
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+      setPicked(null);
+      setReason("");
+      onBooked();
+      toast.success("Session booked.");
+      if (result.id) navigate({ to: "/therapy/$id", params: { id: result.id } });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not book a session.");
+    } finally { setBusy(false); }
   };
 
   return (
@@ -241,6 +250,7 @@ function TherapistBooking({
         <div className="mt-3">
           {canBook ? (
             <>
+              <AdultCareAge value={careAge} onChange={setCareAge} />
               <label className="text-[11px] uppercase tracking-wide text-ink-soft" htmlFor={`reason-${picked.id}`}>
                 What would you like to bring? (optional)
               </label>
@@ -255,7 +265,7 @@ function TherapistBooking({
               <button
                 type="button"
                 onClick={book}
-                disabled={busy}
+                disabled={busy || !isAdultCareAge(careAge)}
                 className="mt-2.5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-ink px-5 py-2.5 text-[13px] text-paper disabled:opacity-40"
               >
                 {busy && <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.6} />}

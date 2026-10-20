@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { BRAND } from "@/config/brand";
+import { Capacitor } from "@capacitor/core";
+import { NATIVE_RECOVERY_CALLBACK } from "@/lib/auth-links";
 
 export const Route = createFileRoute("/forgot-password")({
   staticData: { sitemap: false },
@@ -33,15 +35,17 @@ function ForgotPassword() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-    setLoading(false);
-    if (error) {
-      toast.error(error.message);
-      return;
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: Capacitor.isNativePlatform() ? NATIVE_RECOVERY_CALLBACK : `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      setSent(true);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not request a reset. Try again.");
+    } finally {
+      setLoading(false);
     }
-    setSent(true);
   };
 
   return (
@@ -55,8 +59,9 @@ function ForgotPassword() {
         <div className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-soft">
           {sent ? (
             <p className="text-[13.5px] leading-relaxed text-ink">
-              Check <span className="text-brass">{email}</span>. The link works once and expires
-              shortly — open it on this device if you can.
+              If an account exists for <span className="text-brass">{email}</span>,
+              a reset link has been requested. Open the link on the same device
+              where you requested it. The link works once and expires shortly.
             </p>
           ) : (
             <form onSubmit={submit} className="space-y-3">

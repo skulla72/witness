@@ -12,6 +12,7 @@ import { loadFeed, type Author } from "@/lib/prayers";
 import { searchPeople } from "@/lib/messaging";
 import { incomingRequests, listFriends, outgoingRequests, removeLink, respond } from "@/lib/friends";
 import { useTone } from "@/hooks/useTone";
+import { GroupLoadError } from "@/components/walk/GroupLoadError";
 
 
 export const Route = createFileRoute("/circle")({
@@ -41,7 +42,7 @@ function Circle() {
       for (const r of rosters) for (const a of r) if (a.id !== userId) seen.set(a.id, a);
       return Array.from(seen.values());
     },
-    enabled: !!userId && groups.length > 0,
+    enabled: !!userId && groupsQ.isSuccess && groups.length > 0,
   });
   const feedQ = useQuery({ queryKey: ["stories", "feed", userId ?? "anon", 60], queryFn: () => loadFeed(userId ?? null, 60), enabled: !!userId });
 
@@ -70,6 +71,13 @@ function Circle() {
         </div>
       ) : (
         <>
+          {groupsQ.isError ? (
+            <GroupLoadError subject="your circle membership" retry={() => { void groupsQ.refetch(); }} retrying={groupsQ.isFetching} />
+          ) : peopleQ.isError && groups.length > 0 ? (
+            <GroupLoadError subject="the people in your circles" retry={() => { void peopleQ.refetch(); }} retrying={peopleQ.isFetching} />
+          ) : !userId || groupsQ.isPending || (groups.length > 0 && peopleQ.isPending) ? (
+            <p role="status" className="text-[13px] text-ink-soft">Loading your circles and their people…</p>
+          ) : <>
           <div className="bg-card border border-border rounded-2xl p-4 shadow-soft mb-6">
             <div className="flex -space-x-2 mb-3">
               {members.slice(0, 8).map(m => (
@@ -118,6 +126,7 @@ function Circle() {
               {circleFeed.map(p => <PrayerCard key={p.id} prayer={p} onRemoved={() => qc.invalidateQueries({ queryKey: ["stories"] })} />)}
             </div>
           )}
+          </>}
         </>
       )}
     </div>

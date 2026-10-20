@@ -61,6 +61,43 @@ const LEGACY_KEY = "witness.journal.v1";
 const EVENT = "witness:journal";
 
 let cache: JournalState | null = null;
+let account: string | null = null;
+
+/** Never guess who owns the old, unscoped device journal. Keep it untouched. */
+export function setJournalAccount(userId: string | null) {
+  if (account === userId) return;
+  account = userId;
+  cache = null;
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(EVENT));
+}
+export function journalAccount() { return account; }
+
+export function hasLegacyJournal() {
+  return typeof window !== "undefined" &&
+    Boolean(window.localStorage.getItem(KEY) ?? window.localStorage.getItem(LEGACY_KEY));
+}
+
+/** Recovery requires the person to explicitly confirm ownership in the UI. */
+export function recoverLegacyJournal() {
+  if (!account || typeof window === "undefined") throw new Error("Sign in first.");
+  const raw = window.localStorage.getItem(KEY) ?? window.localStorage.getItem(LEGACY_KEY);
+  if (!raw) return;
+  const legacy = JSON.parse(raw) as Partial<JournalState>;
+  const current = readJournal();
+  const entries = [...current.entries];
+  for (const entry of (legacy.entries ?? []).map(normalize)) {
+    if (!entries.some(e => e.id === entry.id)) entries.push(entry);
+  }
+  // Preserve even same-day entries; do not silently overwrite either version.
+  writeJournal({ ...legacy, entries });
+}
+
+export function clearAccountJournal(userId: string) {
+  if (typeof window !== "undefined") {
+    window.localStorage.removeItem(`${KEY}:${userId}`);
+  }
+  if (account === userId) { cache = null; setJournalAccount(null); }
+}
 
 export function todayKey(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
@@ -100,17 +137,23 @@ function normalize(e: Partial<JournalEntry> & { text?: string; day?: string }): 
     amazing: e.amazing ?? "",
     better: e.better ?? "",
     reflection: e.reflection ?? "",
-    id: e.id ?? base.id,
+    id: e.id ?? `legacy_${day}_${stableLegacyId(e)}`,
     day,
   };
 }
 
+function stableLegacyId(entry: Partial<JournalEntry> & { text?: string }) {
+  let hash = 2166136261;
+  for (const ch of JSON.stringify(entry)) hash = Math.imul(hash ^ ch.charCodeAt(0), 16777619);
+  return (hash >>> 0).toString(36);
+}
+
 export function readJournal(): JournalState {
+  if (!account) return { ...DEFAULT_JOURNAL, entries: [] };
   if (cache) return cache;
   if (typeof window === "undefined") return DEFAULT_JOURNAL;
   try {
-    const raw =
-      window.localStorage.getItem(KEY) ?? window.localStorage.getItem(LEGACY_KEY) ?? null;
+    const raw = window.localStorage.getItem(`${KEY}:${account}`);
     if (!raw) {
       cache = DEFAULT_JOURNAL;
     } else {
@@ -128,14 +171,12 @@ export function readJournal(): JournalState {
 }
 
 export function writeJournal(next: Partial<JournalState>) {
+  if (!account) throw new Error("Sign in to keep your journal private.");
   const merged = { ...readJournal(), ...next };
-  cache = merged;
   if (typeof window !== "undefined") {
-    try {
-      window.localStorage.setItem(KEY, JSON.stringify(merged));
-    } catch {
-      /* storage unavailable — the ritual still works for this session */
-    }
+    // A failed durable write must not be presented as a successful save.
+    window.localStorage.setItem(`${KEY}:${account}`, JSON.stringify(merged));
+    cache = merged;
     window.dispatchEvent(new Event(EVENT));
   }
   return merged;
@@ -198,7 +239,7 @@ export function saveEntry(entry: JournalEntry) {
     updated_at: new Date().toISOString(),
   };
   if (!hasAnything(next)) return state;
-  const entries = [next, ...state.entries.filter(e => e.day !== day)].sort((a, b) =>
+  const entries = [next, ...state.entries.filter(e => e.id !== next.id)].sort((a, b) =>
     a.day < b.day ? 1 : -1,
   );
   return writeJournal({ entries });

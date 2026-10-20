@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AccountControlsRouteImport } from './routes/account-controls'
 import { Route as AnsweredRouteImport } from './routes/answered'
 import { Route as BibleRouteImport } from './routes/bible'
 import { Route as CampaignRouteImport } from './routes/campaign'
@@ -108,6 +109,7 @@ import { Route as TherapyIndexRouteImport } from './routes/therapy.index'
 import { Route as TherapyIdRouteImport } from './routes/therapy.$id'
 import { Route as WalkIndexRouteImport } from './routes/walk.index'
 import { Route as WalkIdRouteImport } from './routes/walk.$id'
+import { Route as ApiPublicCronHealthRouteImport } from './routes/api/public/cron-health'
 import { Route as CommunityClaimSlugRouteImport } from './routes/community.claim.$slug'
 import { Route as CommunityDashboardSlugRouteImport } from './routes/community.dashboard.$slug'
 import { Route as CommunityManageSlugRouteImport } from './routes/community.manage.$slug'
@@ -123,6 +125,11 @@ import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/l
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountControlsRoute = AccountControlsRouteImport.update({
+  id: '/account-controls',
+  path: '/account-controls',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AnsweredRoute = AnsweredRouteImport.update({
@@ -615,6 +622,11 @@ const WalkIdRoute = WalkIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => WalkRoute,
 } as any)
+const ApiPublicCronHealthRoute = ApiPublicCronHealthRouteImport.update({
+  id: '/api/public/cron-health',
+  path: '/api/public/cron-health',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CommunityClaimSlugRoute = CommunityClaimSlugRouteImport.update({
   id: '/claim/$slug',
   path: '/claim/$slug',
@@ -675,6 +687,7 @@ const LovableEmailTransactionalPreviewRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/account-controls': typeof AccountControlsRoute
   '/answered': typeof AnsweredRoute
   '/bible': typeof BibleRoute
   '/campaign': typeof CampaignRoute
@@ -773,6 +786,7 @@ export interface FileRoutesByFullPath {
   '/pros/': typeof ProsIndexRoute
   '/therapy/': typeof TherapyIndexRoute
   '/walk/': typeof WalkIndexRoute
+  '/api/public/cron-health': typeof ApiPublicCronHealthRoute
   '/community/claim/$slug': typeof CommunityClaimSlugRoute
   '/community/dashboard/$slug': typeof CommunityDashboardSlugRoute
   '/community/manage/$slug': typeof CommunityManageSlugRoute
@@ -787,6 +801,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/account-controls': typeof AccountControlsRoute
   '/answered': typeof AnsweredRoute
   '/bible': typeof BibleRoute
   '/campaign': typeof CampaignRoute
@@ -878,6 +893,7 @@ export interface FileRoutesByTo {
   '/pros': typeof ProsIndexRoute
   '/therapy': typeof TherapyIndexRoute
   '/walk': typeof WalkIndexRoute
+  '/api/public/cron-health': typeof ApiPublicCronHealthRoute
   '/community/claim/$slug': typeof CommunityClaimSlugRoute
   '/community/dashboard/$slug': typeof CommunityDashboardSlugRoute
   '/community/manage/$slug': typeof CommunityManageSlugRoute
@@ -893,6 +909,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/account-controls': typeof AccountControlsRoute
   '/answered': typeof AnsweredRoute
   '/bible': typeof BibleRoute
   '/campaign': typeof CampaignRoute
@@ -991,6 +1008,7 @@ export interface FileRoutesById {
   '/pros/': typeof ProsIndexRoute
   '/therapy/': typeof TherapyIndexRoute
   '/walk/': typeof WalkIndexRoute
+  '/api/public/cron-health': typeof ApiPublicCronHealthRoute
   '/community/claim/$slug': typeof CommunityClaimSlugRoute
   '/community/dashboard/$slug': typeof CommunityDashboardSlugRoute
   '/community/manage/$slug': typeof CommunityManageSlugRoute
@@ -1007,6 +1025,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/account-controls'
     | '/answered'
     | '/bible'
     | '/campaign'
@@ -1105,6 +1124,7 @@ export interface FileRouteTypes {
     | '/pros/'
     | '/therapy/'
     | '/walk/'
+    | '/api/public/cron-health'
     | '/community/claim/$slug'
     | '/community/dashboard/$slug'
     | '/community/manage/$slug'
@@ -1119,6 +1139,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/account-controls'
     | '/answered'
     | '/bible'
     | '/campaign'
@@ -1210,6 +1231,7 @@ export interface FileRouteTypes {
     | '/pros'
     | '/therapy'
     | '/walk'
+    | '/api/public/cron-health'
     | '/community/claim/$slug'
     | '/community/dashboard/$slug'
     | '/community/manage/$slug'
@@ -1224,6 +1246,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/account-controls'
     | '/answered'
     | '/bible'
     | '/campaign'
@@ -1322,6 +1345,7 @@ export interface FileRouteTypes {
     | '/pros/'
     | '/therapy/'
     | '/walk/'
+    | '/api/public/cron-health'
     | '/community/claim/$slug'
     | '/community/dashboard/$slug'
     | '/community/manage/$slug'
@@ -1337,6 +1361,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccountControlsRoute: typeof AccountControlsRoute
   AnsweredRoute: typeof AnsweredRoute
   BibleRoute: typeof BibleRoute
   CampaignRoute: typeof CampaignRoute
@@ -1412,6 +1437,7 @@ export interface RootRouteChildren {
   StoreSlugRoute: typeof StoreSlugRoute
   MessagesIndexRoute: typeof MessagesIndexRoute
   ProsIndexRoute: typeof ProsIndexRoute
+  ApiPublicCronHealthRoute: typeof ApiPublicCronHealthRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   ApiPublicPayoutsRunRoute: typeof ApiPublicPayoutsRunRoute
   ApiPublicPushRemindersRoute: typeof ApiPublicPushRemindersRoute
@@ -1427,6 +1453,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account-controls': {
+      id: '/account-controls'
+      path: '/account-controls'
+      fullPath: '/account-controls'
+      preLoaderRoute: typeof AccountControlsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/answered': {
@@ -2115,6 +2148,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WalkIdRouteImport
       parentRoute: typeof WalkRoute
     }
+    '/api/public/cron-health': {
+      id: '/api/public/cron-health'
+      path: '/api/public/cron-health'
+      fullPath: '/api/public/cron-health'
+      preLoaderRoute: typeof ApiPublicCronHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/community/claim/$slug': {
       id: '/community/claim/$slug'
       path: '/claim/$slug'
@@ -2327,6 +2367,7 @@ const WalkRouteWithChildren = WalkRoute._addFileChildren(WalkRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccountControlsRoute: AccountControlsRoute,
   AnsweredRoute: AnsweredRoute,
   BibleRoute: BibleRoute,
   CampaignRoute: CampaignRoute,
@@ -2402,6 +2443,7 @@ const rootRouteChildren: RootRouteChildren = {
   StoreSlugRoute: StoreSlugRoute,
   MessagesIndexRoute: MessagesIndexRoute,
   ProsIndexRoute: ProsIndexRoute,
+  ApiPublicCronHealthRoute: ApiPublicCronHealthRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   ApiPublicPayoutsRunRoute: ApiPublicPayoutsRunRoute,
   ApiPublicPushRemindersRoute: ApiPublicPushRemindersRoute,

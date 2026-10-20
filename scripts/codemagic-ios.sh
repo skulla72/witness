@@ -39,12 +39,12 @@ bunx --no-install cap sync ios
 echo "Initializing the build keychain."
 keychain initialize
 
-echo "Fetching or creating Apple App Store signing files for com.commonlight.witness."
+echo "Fetching existing Apple App Store signing files for com.commonlight.witness."
 # The protected, reusable certificate key prevents creating a new distribution
 # certificate on each build. Never echo it or regenerate it in this script.
 app-store-connect fetch-signing-files com.commonlight.witness \
   --type IOS_APP_STORE \
-  --create
+  --strict-match-identifier
 
 echo "Importing the distribution certificate and applying its provisioning profile."
 keychain add-certificates

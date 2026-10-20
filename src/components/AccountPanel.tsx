@@ -4,6 +4,8 @@ import { Download, Loader2, Trash2, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/hooks/useSession";
 import { deleteMyAccount, exportMyData } from "@/lib/account.functions";
+import { disablePush } from "@/lib/push";
+import { clearAccountJournal, hasLegacyJournal, readJournal, recoverLegacyJournal, setJournalAccount } from "@/lib/journal";
 
 /** Name, a copy of everything you've put in, and a way out. */
 export function AccountPanel({ embedded = false }: { embedded?: boolean }) {
@@ -14,6 +16,8 @@ export function AccountPanel({ embedded = false }: { embedded?: boolean }) {
   const [busy, setBusy] = useState<"save" | "export" | "delete" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const [legacy, setLegacy] = useState(false);
+  useEffect(() => { setLegacy(hasLegacyJournal()); }, [userId]);
 
   useEffect(() => {
     if (!userId) return;
@@ -45,14 +49,17 @@ export function AccountPanel({ embedded = false }: { embedded?: boolean }) {
     setError(null);
     try {
       const bundle = await exportMyData();
+      setJournalAccount(userId);
+      const copy = { ...JSON.parse(bundle.json), device_journal: readJournal(), device_journal_note: "Account-scoped journal on this device only. Legacy unassigned entries are preserved separately and are not automatically exported." };
       const url = URL.createObjectURL(
-        new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" }),
+        new Blob([JSON.stringify(copy, null, 2)], { type: "application/json" }),
       );
       const a = document.createElement("a");
       a.href = url;
       a.download = "my-witness-data.json";
       a.click();
       URL.revokeObjectURL(url);
+      if (!bundle.complete) setError(`A partial copy was downloaded. These collections could not be read: ${bundle.unavailable_collections.join(", ")}. Saved file links, when available, expire in one hour.`);
     } catch {
       setError("We couldn't build your copy just now.");
     }
@@ -62,13 +69,22 @@ export function AccountPanel({ embedded = false }: { embedded?: boolean }) {
   const remove = async () => {
     setBusy("delete");
     setError(null);
-    const result = await deleteMyAccount();
-    if ("error" in result) {
+    try {
+      // Disconnect push before deleting the account (the session is needed).
+      await disablePush();
+      const result = await deleteMyAccount();
+      if ("error" in result) {
+        setError(result.error);
+        return;
+      }
+      clearAccountJournal(userId);
+      await supabase.auth.signOut();
+      navigate({ to: "/login" });
+    } catch {
+      setError("Could not finish deletion. Your local journal was not removed. Try again.");
+    } finally {
       setBusy(null);
-      return setError(result.error);
     }
-    await supabase.auth.signOut();
-    navigate({ to: "/login" });
   };
 
   return (
@@ -99,6 +115,16 @@ export function AccountPanel({ embedded = false }: { embedded?: boolean }) {
       </label>
 
       <div className="mt-4 space-y-2">
+        {legacy && (
+          <div className="rounded-xl border border-border p-3 text-[12px]">
+            <p>An older journal is preserved on this device, but we cannot determine which account wrote it. It has not been assigned to your account.</p>
+            <button type="button" className="mt-2 underline" onClick={() => {
+              if (!window.confirm("Only continue if you wrote the older journal on this device. Add those entries to this account? The original backup will be kept.")) return;
+              try { setJournalAccount(userId); recoverLegacyJournal(); setError(null); }
+              catch { setError("Could not recover the older entries. The original backup was not changed."); }
+            }}>I wrote the older journal — recover my entries</button>
+          </div>
+        )}
         <button
           type="button"
           onClick={download}
@@ -119,13 +145,19 @@ export function AccountPanel({ embedded = false }: { embedded?: boolean }) {
             onClick={() => setConfirming(true)}
             className="flex w-full items-center gap-2 rounded-xl border border-border bg-paper px-3 py-2.5 text-[13px] text-ink-soft"
           >
-            <Trash2 className="h-3.5 w-3.5" /> Delete my account
+            <Trash2 className="h-3.5 w-3.5" /> Request account removal
           </button>
         ) : (
           <div className="rounded-xl border border-border bg-paper p-3">
             <p className="text-[12.5px] leading-relaxed text-ink">
-              This removes your profile, answers, groups and prayer requests for good. Gifts and
-              orders stay on record for accounting, with your name taken off.
+              This requests destructive account-data removal and attempts saved-file cleanup
+              before the account removal step. Some steps can fail or need a retry.
+              Complete erasure, financial-record handling and retention outcomes have
+              not been independently verified; do not assume every copy is removed.
+              Download your data and original files first. Successful steps may be irreversible.
+              Active gifts/plans and
+              organization ownership must be resolved before deletion. Journals
+              on other devices and unassigned legacy backups are not erased by this device.
             </p>
             <div className="mt-2.5 flex gap-2">
               <button
@@ -134,7 +166,7 @@ export function AccountPanel({ embedded = false }: { embedded?: boolean }) {
                 disabled={busy === "delete"}
                 className="rounded-full bg-flame px-3.5 py-2 text-[12.5px] font-medium text-paper disabled:opacity-60"
               >
-                {busy === "delete" ? "Deleting…" : "Yes, delete it"}
+                {busy === "delete" ? "Processing removal…" : "Continue destructive removal request"}
               </button>
               <button
                 type="button"

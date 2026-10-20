@@ -24,6 +24,13 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+<key>CFBundleURLTypes</key>
+<array>
+  <dict>
+    <key>CFBundleURLName</key><string>com.commonlight.witness.auth</string>
+    <key>CFBundleURLSchemes</key><array><string>com.commonlight.witness</string></array>
+  </dict>
+</array>
 	<key>NSCameraUsageDescription</key>
 	<string>Witness uses the camera when you choose to take a prayer or gratitude photo.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

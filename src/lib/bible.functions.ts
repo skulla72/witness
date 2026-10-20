@@ -43,6 +43,7 @@ export const getPassage = createServerFn({ method: "GET" })
   .handler(async ({ data }) => loadPassage(data.reference, data.translation));
 
 const SuggestInput = z.object({
+  consent: z.literal(true),
   situation: z.string().min(3),
   category: z.string().optional(),
   translation: z.string().default("kjv"),

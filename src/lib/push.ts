@@ -1,6 +1,8 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getMessaging, getToken, isSupported, onMessage } from "firebase/messaging";
 import { supabase } from "@/integrations/supabase/client";
+import { Capacitor } from "@capacitor/core";
+import { deleteToken } from "firebase/messaging";
 
 const appId = import.meta.env.VITE_LOVABLE_CONNECTOR_FIREBASE_MESSAGING_APP_ID as string | undefined;
 const vapidKey = import.meta.env.VITE_LOVABLE_CONNECTOR_FIREBASE_MESSAGING_VAPID_KEY as
@@ -23,6 +25,8 @@ export type PushStatus =
   | "signed-out";
 
 export function pushConfigured() {
+  if (Capacitor.isNativePlatform()) return Capacitor.getPlatform() === "android" &&
+    import.meta.env.VITE_NATIVE_ANDROID_PUSH_ENABLED === "true";
   return Boolean(
     firebaseConfig.apiKey &&
       firebaseConfig.projectId &&
@@ -34,13 +38,19 @@ export function pushConfigured() {
 
 /** Whether this browser already granted notifications. */
 export function pushGranted() {
+  if (Capacitor.isNativePlatform()) return typeof window !== "undefined" &&
+    Boolean(window.localStorage.getItem("witness.push.token"));
   return typeof window !== "undefined" && "Notification" in window
-    ? Notification.permission === "granted"
+    ? Notification.permission === "granted" && Boolean(window.localStorage.getItem("witness.push.token"))
     : false;
 }
 
 /** Call from a click: browsers ignore permission requests without a tap. */
 export async function enablePush(): Promise<PushStatus> {
+  if (Capacitor.isNativePlatform()) {
+    const { enableNativePush } = await import("@/lib/native-push");
+    return enableNativePush();
+  }
   if (!pushConfigured()) return "not-configured";
   if (!("Notification" in window) || !(await isSupported())) return "unsupported";
   if (window.top !== window.self) return "open-in-new-tab";
@@ -62,12 +72,14 @@ export async function enablePush(): Promise<PushStatus> {
   const token = await getToken(messaging, { vapidKey, serviceWorkerRegistration: registration });
   if (!token) return "denied";
 
-  await supabase
+  const { error } = await supabase
     .from("push_devices")
     .upsert(
       { user_id: userId, token, platform: "web", last_seen_at: new Date().toISOString() },
       { onConflict: "token" },
     );
+  if (error) throw new Error("Could not save this device's notification registration.");
+  window.localStorage.setItem("witness.push.token", token);
 
   // A notification arriving while the app is open shouldn't interrupt — it is
   // handled quietly by whoever mounts this listener.
@@ -77,15 +89,33 @@ export async function enablePush(): Promise<PushStatus> {
 
 /** Stop notifications on this device. */
 export async function disablePush(): Promise<void> {
+  const token = window.localStorage.getItem("witness.push.token");
+  if (Capacitor.isNativePlatform()) {
+    if (!token) return;
+    const { PushNotifications } = await import("@capacitor/push-notifications");
+    await PushNotifications.unregister();
+  } else if (getApps().length && await isSupported()) {
+    await deleteToken(getMessaging(getApps()[0]));
+  }
+  if (!Capacitor.isNativePlatform() && "serviceWorker" in navigator) {
   const registrations = await navigator.serviceWorker.getRegistrations();
   for (const registration of registrations) {
     if (registration.active?.scriptURL.includes("firebase-messaging-sw.js")) {
+      const subscription = await registration.pushManager.getSubscription();
+      if (subscription && !(await subscription.unsubscribe())) {
+        throw new Error("Could not disconnect this device's push subscription.");
+      }
       await registration.unregister();
     }
   }
+  }
   const { data } = await supabase.auth.getSession();
   const userId = data.session?.user.id;
-  if (userId) await supabase.from("push_devices").delete().eq("user_id", userId);
+  if (userId && token) {
+    const { error } = await supabase.from("push_devices").delete().eq("user_id", userId).eq("token", token);
+    if (error) throw new Error("Could not remove this device's registration.");
+  }
+  window.localStorage.removeItem("witness.push.token");
 }
 
 /** What to tell someone after asking their phone for notifications. */

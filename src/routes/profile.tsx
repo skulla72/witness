@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { signOutWitness } from "@/lib/sign-out";
 import { useSession } from "@/hooks/useSession";
 import { loadAuthor, loadStoriesBy, myRoles } from "@/lib/prayers";
 import { Avatar } from "@/components/Avatar";
@@ -72,7 +73,8 @@ function Profile() {
   const isMod = (rolesQ.data ?? []).some(r => r === "admin" || r === "vetter");
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    try { await signOutWitness(); }
+    catch (error) { toast.error(error instanceof Error ? error.message : "Could not sign out."); return; }
     qc.clear();
     navigate({ to: "/login" });
   };

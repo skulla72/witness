@@ -7,9 +7,9 @@ import { LEGAL_ADDRESS, LEGAL_CONTACT } from "@/lib/legal";
 export const Route = createFileRoute("/terms")({
   staticData: { sitemap: true },
   head: () => ({ meta: [
-    { title: `Terms of Use & Beta Agreement | ${BRAND.name}` },
+    { title: `Terms of Use — Unfinished Draft | ${BRAND.name}` },
     { name: "description", content: `The rules of ${BRAND.name}: your account, member stories, serving and needs, giving, care sessions, and the limits of our responsibility.` },
-    { property: "og:title", content: `Terms of Use & Beta Agreement | ${BRAND.name}` },
+    { property: "og:title", content: `Terms of Use — Unfinished Draft | ${BRAND.name}` },
     { property: "og:description", content: `The rules of ${BRAND.name}: your account, member stories, serving, giving, care sessions, and liability.` },
     { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
   ] }), component: TermsPage,
@@ -17,14 +17,16 @@ export const Route = createFileRoute("/terms")({
 
 function TermsPage() {
   return (
-    <LegalPage title="Terms of Use & Beta Agreement" version={COVENANT_VERSION}>
+    <LegalPage title="Terms of Use — Unfinished Draft" version={COVENANT_VERSION}>
       <p>
         These terms are the agreement between you and {BRAND.name} ({LEGAL_CONTACT.entity}). By creating an account
         or using the app you accept them. If you do not accept them, do not use {BRAND.name}.
       </p>
       <p>
-        {BRAND.name} is currently an invitation-only prerelease community. Features may change, break, or be removed
-        while we test.
+        {BRAND.name} is preparing for public release. Any separately enabled
+        invitation controls depend on launch configuration, not a private-beta
+        confidentiality rule. Features may change. This document is an unfinished
+        draft and is not approved for launch.
       </p>
 
       <h2>1. Who may use {BRAND.name}</h2>
@@ -33,11 +35,13 @@ function TermsPage() {
         You must give accurate information, keep your password to yourself, and you are responsible for everything
         done through your account. One person, one account.
       </p>
+      <p>Counseling requests in this launch candidate are for adults 18+ seeking care for themselves only. Teen counseling is deferred until consent and legal arrangements are finalized. Crisis information and unrelated community features remain available.</p>
 
-      <h2>2. Keep the beta confidential</h2>
+      <h2>2. Public-release scope</h2>
       <p>
-        Until {BRAND.name} announces a public release, do not share invitations, screenshots, recordings, feature
-        details, or other non-public information outside the beta.
+        This draft is prepared for an intended public release. It does not impose
+        a beta-confidentiality requirement. Member privacy, audience choices and
+        the protections below still apply. Legal approval remains unfinished.
       </p>
 
       <h2>3. Protect member stories</h2>
@@ -161,21 +165,22 @@ function TermsPage() {
 
       <h2>16. Disputes and governing law</h2>
       <p>
-        These terms are governed by the laws of the State of {LEGAL_CONTACT.state}, without regard to conflict-of-law
-        rules. Before filing anything, contact us so we can try to resolve it informally within 30 days. Any
-        remaining dispute will be brought in the state or federal courts located in {LEGAL_CONTACT.state}, and you
-        agree to bring claims individually rather than as part of a class action.
+        Common Light LLC is registered in Colorado, USA. Mailing address,
+        governing law and dispute terms are awaiting owner/legal confirmation.
+        This draft does not select a jurisdiction.
       </p>
 
       <h2>17. Changes and contact</h2>
       <p>
         We will post a new version here when these terms change and, for material changes, ask you to accept them
-        again in the app. Legal notices may be sent to {LEGAL_CONTACT.entity}, {LEGAL_ADDRESS}, or by email to{" "}
+        again in the app. {LEGAL_CONTACT.entity} is registered in {LEGAL_ADDRESS}.
+        No postal address is confirmed; use the monitored contact email for notice instructions:{" "}
         <a href={`mailto:${LEGAL_CONTACT.email}`} className="underline">{LEGAL_CONTACT.email}</a>.
       </p>
 
       <p className="font-medium">
-        This is a beta document written for the private test. Have qualified counsel review it before public launch.
+        This is an unfinished, unapproved public-release draft. Qualified legal
+        review and owner decisions are still required before publication.
       </p>
     </LegalPage>
   );

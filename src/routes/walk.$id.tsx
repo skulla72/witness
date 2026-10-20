@@ -6,6 +6,7 @@ import { ArrowLeft, Shield, Users, Clock, Lock, DoorOpen, Check, LogOut } from "
 import { PrayerCard } from "@/components/PrayerCard";
 import { JoinRitual } from "@/components/walk/JoinRitual";
 import { GroupBadges } from "@/components/walk/GroupBadges";
+import { GroupLoadError } from "@/components/walk/GroupLoadError";
 import { Avatar } from "@/components/Avatar";
 import { SafetyMenu } from "@/components/safety/ReportSheet";
 import { useSession } from "@/hooks/useSession";
@@ -35,8 +36,8 @@ function WalkGroupDetail() {
 
   const groupQ = useQuery({ queryKey: ["group", id, userId ?? "anon"], queryFn: () => loadGroup(id, userId ?? null), enabled: userId !== undefined });
   const group = groupQ.data;
-  const joined = group?.joined ?? false;
-  const rosterQ = useQuery({ queryKey: ["roster", id], queryFn: () => loadRoster(id), enabled: joined });
+  const joined = !groupQ.isError && (group?.joined ?? false);
+  const rosterQ = useQuery({ queryKey: ["roster", id, userId ?? "anon"], queryFn: () => loadRoster(id), enabled: joined });
   const feedQ = useQuery({ queryKey: ["stories", "feed", userId ?? "anon", 60], queryFn: () => loadFeed(userId ?? null, 60), enabled: joined && !!userId });
 
   const refresh = () => {
@@ -47,6 +48,9 @@ function WalkGroupDetail() {
 
   if (groupQ.isLoading || userId === undefined) {
     return <div className="px-5 pt-6"><div className="h-40 rounded-2xl bg-card border border-border animate-pulse" /></div>;
+  }
+  if (groupQ.isError) {
+    return <div className="px-5 pt-6"><GroupLoadError subject="this circle and your membership" retry={() => { void groupQ.refetch(); }} retrying={groupQ.isFetching} /><Link to="/walk" className="mt-4 inline-block text-brass">Back to circles</Link></div>;
   }
   if (!group) {
     return (
@@ -126,19 +130,28 @@ function WalkGroupDetail() {
         <>
           <section className="mt-7 px-5" aria-labelledby="roster">
             <h2 id="roster" className="font-serif text-[13px] text-ink-soft mb-3 uppercase tracking-[0.18em]">At the table</h2>
-            <div className="flex flex-wrap gap-3">
+            {rosterQ.isError ? (
+              <GroupLoadError subject="the people in this circle" retry={() => { void rosterQ.refetch(); }} retrying={rosterQ.isFetching} />
+            ) : rosterQ.isPending ? (
+              <p role="status" className="text-[13px] text-ink-soft">Loading the people in this circle…</p>
+            ) : <div className="flex flex-wrap gap-3">
+              {rosterQ.data.length === 0 && <p className="text-[13px] text-ink-soft">No members to show yet.</p>}
               {(rosterQ.data ?? []).map(a => (
                 <Link key={a.id} to="/person/$id" params={{ id: a.id }} className="flex flex-col items-center gap-1 w-14">
                   <Avatar name={a.name} photo={a.photo} size={44} />
                   <span className="text-[10px] text-ink-soft truncate w-full text-center">{a.id === userId ? "You" : a.name.split(" ")[0]}</span>
                 </Link>
               ))}
-            </div>
+            </div>}
           </section>
 
           <section className="mt-7 px-4" aria-labelledby="private-feed">
             <h2 id="private-feed" className="px-1 font-serif text-[13px] text-ink-soft mb-3 uppercase tracking-[0.18em]">Circle prayers</h2>
-            {groupPrayers.length === 0 ? (
+            {rosterQ.isError ? (
+              <p className="text-[13px] text-ink-soft">Circle posts are unavailable until the people in this circle can be loaded. Try again above.</p>
+            ) : rosterQ.isPending ? (
+              <p role="status" className="text-[13px] text-ink-soft">Loading your circle…</p>
+            ) : groupPrayers.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border p-5 text-center">
                 <p className="text-[13.5px] text-ink-soft">Nothing shared with the circle yet.</p>
                 <p className="mt-1 text-[12px] text-ink-soft">Post a prayer with privacy set to <span className="text-ink">Circle</span> and it lands here for the people at this table.</p>

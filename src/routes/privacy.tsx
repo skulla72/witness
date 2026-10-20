@@ -25,7 +25,7 @@ function PrivacyPage() {
 
       <h2>What we collect</h2>
       <p>
-        <strong>You give us:</strong> your name, email, password, date of birth, profile photo and details; prayers,
+        <strong>You give us:</strong> your name, email, password, minimum-age confirmation, profile photo and details; prayers,
         answers, gratitude notes, journal entries, videos, voice recordings and captions; messages and calls you
         place; group and church activity; serving hours and job postings; giving, gift, and receipt details; safety
         reports; survey answers, including whether you want a faith-based experience and your gender when you choose
@@ -75,16 +75,35 @@ function PrivacyPage() {
 
       <h2>How long we keep it</h2>
       <p>
-        Your content stays until you delete it or close your account. After you close it we remove your profile and
-        posts within 30 days, except: giving and receipt records kept for up to 7 years for tax and accounting;
-        safety and moderation records kept up to 2 years; and backups that age out within 90 days.
+        Retention periods, deletion timelines and exceptions are awaiting legal
+        approval and operational verification. No retention schedule is finalized
+        in this draft. Existing account records may include birth dates collected
+        by earlier signup flows; those records have not been changed. New local
+        signup uses a 13-or-older self-declaration checkbox, without collecting
+        an exact age or a full birth date.
+      </p>
+      <p>
+        Signed-in users, including existing accounts, must self-attest minimum
+        age 13 before protected app content opens in this unpublished copy.
+        The account ID, confirmation time, acknowledgement version and 13-or-older
+        declaration are stored in editable account metadata. Existing age bands
+        (13–17 or 18+) are preserved; this checkbox does not establish adulthood.
+        This is not verified age. Adult counseling
+        requires an account-bound 18+ self-attestation; another client's age is
+        not inferred from a clinician's account or a previous session. Existing
+        legacy birthdays remain unchanged; this copy has no birthday editing or
+        removal feature.
       </p>
 
       <h2>Your choices</h2>
+      <p>Common Light LLC operates Witness in the USA. Our actively monitored privacy and deletion contact is <a href="mailto:support@witnessmovement.com" className="underline">support@witnessmovement.com</a>. Minimum user age is 13. Teen counseling is deferred until consent and legal arrangements are finalized.</p>
       <p>
         You can edit your profile, change any post's audience, delete content, turn notifications off, and request
-        an export or full deletion from account settings or by emailing{" "}
+        an export or account-data removal from account settings or by emailing{" "}
         <a href={`mailto:${LEGAL_CONTACT.privacyEmail}`} className="underline">{LEGAL_CONTACT.privacyEmail}</a>.
+        Deletion and export fulfillment, saved-file cleanup, retention exceptions
+        and treatment of financial records remain unverified and legally unfinished.
+        Removal can be destructive, but complete or permanent erasure is not promised.
         Depending on where you live you may also have the right to correct information, object to certain
         processing, or complain to a regulator. We will not treat you differently for exercising these rights.
       </p>
@@ -113,8 +132,9 @@ function PrivacyPage() {
       <p>
         We will post a new version here when this notice changes and tell you in the app about material changes.
         Privacy questions and rights requests may be sent to{" "}
-        <a href={`mailto:${LEGAL_CONTACT.privacyEmail}`} className="underline">{LEGAL_CONTACT.privacyEmail}</a>, or
-        by mail to {LEGAL_CONTACT.entity}, Attn: Privacy, {LEGAL_ADDRESS}.
+        <a href={`mailto:${LEGAL_CONTACT.privacyEmail}`} className="underline">{LEGAL_CONTACT.privacyEmail}</a>.{" "}
+        {LEGAL_CONTACT.entity} is registered in {LEGAL_ADDRESS}. No postal
+        address is confirmed; contact the monitored email above for mailing instructions.
       </p>
 
       <p className="font-medium">

@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { checkoutAccount, checkoutRefusal } from "./checkout-eligibility.server";
 import { assertReturnUrl } from "@/lib/returnUrl";
 import {
   type StripeEnv,
@@ -35,6 +36,7 @@ export const createPlanCheckout = createServerFn({ method: "POST" })
     return data;
   })
   .handler(async ({ data, context }): Promise<PlanResult> => {
+    try { await checkoutAccount(context.userId); } catch (error) { return checkoutRefusal(error); }
     const { supabase, userId } = context;
     const plan = PLANS[data.plan]!;
 

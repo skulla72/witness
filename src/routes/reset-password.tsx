@@ -31,9 +31,12 @@ function ResetPassword() {
 
   useEffect(() => {
     // The recovery link signs the person in with a temporary session.
-    supabase.auth.getSession().then(({ data }) => setReady(!!data.session));
+    supabase.auth.getSession().then(({ data, error }) => {
+      setReady(!error && !!data.session);
+      if (error) toast.error("This recovery link could not be opened. Request a new one.");
+    }).catch(() => toast.error("Could not check this recovery link."));
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (session) setReady(true);
+      setReady(!!session);
     });
     return () => sub.subscription.unsubscribe();
   }, []);
@@ -45,14 +48,16 @@ function ResetPassword() {
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.updateUser({ password });
-    setLoading(false);
-    if (error) {
-      toast.error(error.message);
-      return;
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
+      toast.success("Your password is set.");
+      navigate({ to: "/" });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not save the password.");
+    } finally {
+      setLoading(false);
     }
-    toast.success("Your password is set.");
-    navigate({ to: "/" });
   };
 
   return (

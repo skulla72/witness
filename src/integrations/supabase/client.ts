@@ -2,6 +2,10 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 import { brokeredPreviewStorage } from './previewAuthStorage';
+import { Capacitor } from '@capacitor/core';
+import { setJournalAccount } from '@/lib/journal';
+import { initialCallbackPresence } from '@/lib/oauth-restoration';
+import { signedMediaCache } from '@/lib/signed-media-cache';
 
 function isNewSupabaseApiKey(value: string): boolean {
   return value.startsWith('sb_publishable_') || value.startsWith('sb_secret_');
@@ -44,7 +48,8 @@ function createSupabaseClient() {
     throw new Error(message);
   }
 
-  return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  initialCallbackPresence();
+  const client = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     global: {
       fetch: createSupabaseFetch(SUPABASE_PUBLISHABLE_KEY),
     },
@@ -52,8 +57,16 @@ function createSupabaseClient() {
       storage: brokeredPreviewStorage(),
       persistSession: true,
       autoRefreshToken: true,
+      flowType: Capacitor.isNativePlatform() ? 'pkce' : 'implicit',
     }
   });
+  if (typeof window !== 'undefined') {
+    client.auth.onAuthStateChange((event, session) => {
+      signedMediaCache.setAccount(session?.user.id ?? null, event === 'SIGNED_OUT');
+      setJournalAccount(session?.user.id ?? null);
+    });
+  }
+  return client;
 }
 
 let _supabase: ReturnType<typeof createSupabaseClient> | undefined;

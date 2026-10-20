@@ -1,10 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
 import { BRAND } from "@/config/brand";
 
-/** Bump this when the wording changes — everyone is asked to agree again. */
+/** Historical identifier retained for existing records. Draft display edits are
+ * not an approved legal revision; owner/legal must choose version/re-consent before publication. */
 export const COVENANT_VERSION = "2026-09-18";
 
-export const COVENANT_TITLE = `The ${BRAND.name} Beta Agreement`;
+export const COVENANT_TITLE = `${BRAND.name} Community Terms — Unfinished Draft`;
 
 export const COVENANT_INTRO =
   "People bring their hardest seasons here on video. Before you can see them, you agree to keep what you see inside these walls.";
@@ -21,14 +22,14 @@ export const COVENANT_TERMS: Array<{ heading: string; body: string }> = [
       "What is said in a group, a call, or a private message stays with the people who were there. Not with a spouse, a pastor, a group chat, or an anonymous post.",
   },
   {
-    heading: "Confidential by default",
+    heading: "Respect member privacy",
     body:
-      "Treat everything here as confidential information shared with you in trust. This is a binding agreement, not a suggestion.",
+      "Respect private member content and its chosen audience. This unfinished draft does not declare all app information confidential or claim final legal approval.",
   },
   {
-    heading: `Keep the unreleased ${BRAND.name} beta private`,
+    heading: "Intended public release",
     body:
-      `Until the team announces a public release, you will not share screenshots, recordings, feature details, invitations, or other non-public information about ${BRAND.name} outside this beta.`,
+      `This draft prepares ${BRAND.name} for public release. There is no beta-confidentiality requirement. Member stories and private communications remain subject to their chosen audience and privacy protections.`,
   },
   {
     heading: "Safety is the one exception",

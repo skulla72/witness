@@ -39,7 +39,7 @@ function Mine() {
 
   const answer = async (id: string, status: "accepted" | "declined") => {
     try { await answerRequest(id, status); await qc.invalidateQueries({ queryKey: ["counselors", "requests"] }); toast.success(status === "accepted" ? "Accepted." : "Declined kindly."); }
-    catch { toast.error("Couldn't update that request."); }
+    catch (error) { toast.error(error instanceof Error ? error.message : "Couldn't update that request."); }
   };
 
   return (

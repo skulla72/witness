@@ -8,6 +8,8 @@ import {
 } from "@/lib/stripe.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { PAYMENT_CATALOG } from "@/lib/paymentCatalog";
+import { checkoutAccount, checkoutRefusal } from "./checkout-eligibility.server";
+import { professionalPurchaseKind } from "./action-eligibility";
 
 /** Carrying a page is a service, not a charitable gift. */
 const TAX_CODE = "txcd_10103001";
@@ -55,15 +57,17 @@ export const startProPlan = createServerFn({ method: "POST" })
     return data;
   })
   .handler(async ({ data, context }): Promise<StartResult> => {
+    try { await checkoutAccount(context.userId); } catch (error) { return checkoutRefusal(error); }
     const { supabase, userId } = context;
 
     const { data: pro } = await supabase
       .from("pro_profiles")
-      .select("id, display_name, user_id")
+      .select("id, display_name, user_id, trade")
       .eq("id", data.proId)
       .maybeSingle();
     if (!pro) return { error: "We couldn't find that page." };
     if (pro.user_id !== userId) return { error: "Only the person who owns this page can pay for it." };
+    try { await checkoutAccount(userId, professionalPurchaseKind(pro.trade)); } catch (error) { return checkoutRefusal(error); }
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: row, error: rowError } = await supabaseAdmin

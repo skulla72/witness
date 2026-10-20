@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { GroupBadges } from "@/components/walk/GroupBadges";
+import { GroupLoadError } from "@/components/walk/GroupLoadError";
 import { Shield, Users, Phone, Clock, ChevronRight, Building2, HandHeart, Heart, HandCoins } from "lucide-react";
 import { useSession } from "@/hooks/useSession";
 import { loadGroups, type WalkGroup } from "@/lib/groups";
@@ -84,7 +85,7 @@ function WalkWith() {
       {q.isLoading ? (
         <div className="space-y-3">{[0, 1, 2].map(i => <div key={i} className="h-28 rounded-2xl bg-card border border-border animate-pulse" />)}</div>
       ) : q.isError ? (
-        <p className="text-center text-[13px] text-destructive">Couldn't load the circles right now.</p>
+        <GroupLoadError subject="circles and your membership" retry={() => { void q.refetch(); }} retrying={q.isFetching} />
       ) : (
         <>
           <div>

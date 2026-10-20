@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Check, PenLine, Sun, Moon, Trash2, BarChart3 } from "lucide-react";
 import { useJournal } from "@/hooks/useJournal";
+import { Link } from "@tanstack/react-router";
+import { toast } from "sonner";
 import {
   affirmationFor,
   draftFor,
@@ -21,7 +23,7 @@ import {
  * scolds: tracking is opt-in and a missed day costs nothing.
  */
 export function JournalRitual() {
-  const { journal, ready, update } = useJournal();
+  const { journal, ready, signedIn, update } = useJournal();
   const day = todayKey();
   const [entry, setEntry] = useState<JournalEntry>(() => draftFor(journal, day));
   const [saved, setSaved] = useState(false);
@@ -33,6 +35,12 @@ export function JournalRitual() {
   }, [journal.entries, day]);
 
   if (!ready) return null;
+  if (!signedIn) return (
+    <section className="rounded-3xl border border-border bg-card p-5">
+      <p className="text-[13px] text-ink-soft">Sign in to keep your journal separate from other accounts on this device. Any older entries are preserved.</p>
+      <Link to="/login" className="mt-3 inline-block underline">Sign in to your journal</Link>
+    </section>
+  );
 
   if (!journal.enabled) {
     return (
@@ -76,9 +84,13 @@ export function JournalRitual() {
 
   const save = () => {
     if (!hasAnything(entry)) return;
-    saveEntry(entry);
-    setSaved(true);
-    window.setTimeout(() => setSaved(false), 2200);
+    try {
+      saveEntry(entry);
+      setSaved(true);
+      window.setTimeout(() => setSaved(false), 2200);
+    } catch {
+      toast.error("Your journal could not be saved on this device. Keep your text and try again.");
+    }
   };
 
   return (

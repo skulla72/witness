@@ -5,6 +5,9 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { slugify } from "@/lib/community";
+import { assertCounselorLaunchSpecialties, withAdultCareAge } from "@/lib/launch-policy";
+import { requireAdultClient, requireEligibleActor } from "@/lib/eligibility-client";
+import { authorizeCareAcceptance } from "@/lib/eligibility";
 
 export type Counselor = Tables<"counselor_profiles">;
 export type CounselorRequest = Tables<"counselor_requests">;
@@ -17,7 +20,6 @@ export const SPECIALTIES = [
   "Family",
   "Addiction",
   "Trauma",
-  "Teens",
   "Life transitions",
   "Faith questions",
 ] as const;
@@ -82,6 +84,9 @@ export type CounselorDraft = Pick<
 >;
 
 export async function saveCounselorPage(userId: string, draft: CounselorDraft, existing?: Counselor | null) {
+  // Preserve legacy specialties on existing records, but do not add new teen offerings.
+  assertCounselorLaunchSpecialties(draft.specialties, existing?.specialties);
+  await requireAdultClient(userId);
   if (existing) {
     const { error } = await supabase.from("counselor_profiles").update(draft).eq("id", existing.id);
     if (error) throw error;
@@ -93,11 +98,14 @@ export async function saveCounselorPage(userId: string, draft: CounselorDraft, e
   return slug;
 }
 
-export async function requestSession(counselorId: string, userId: string, message: string, prefersVideo: boolean) {
-  const { error } = await supabase.from("counselor_requests").insert({
-    counselor_id: counselorId, requester_id: userId, message, prefers_video: prefersVideo,
+export async function requestSession(counselorId: string, userId: string, message: string, prefersVideo: boolean, age?: unknown) {
+  return withAdultCareAge(age, async () => {
+    await requireAdultClient(userId);
+    const { error } = await supabase.from("counselor_requests").insert({
+      counselor_id: counselorId, requester_id: userId, message, prefers_video: prefersVideo,
+    });
+    if (error) throw error;
   });
-  if (error) throw error;
 }
 
 export async function myRequestTo(counselorId: string, userId: string): Promise<CounselorRequest | null> {
@@ -116,6 +124,21 @@ export async function requestsForMe(counselorId: string): Promise<CounselorReque
 }
 
 export async function answerRequest(id: string, status: "accepted" | "declined") {
+  if (status !== "accepted" && status !== "declined") throw new Error("Invalid request decision.");
+  if (status === "accepted") {
+    const actor = await requireEligibleActor();
+    await authorizeCareAcceptance(actor, id, async requestId => {
+      const { data, error } = await supabase.from("counselor_requests")
+        .select("id,requester_id,counselor_id").eq("id", requestId).single();
+      if (error) throw new Error("Could not establish the actual client for this request.");
+      return data;
+    }, async counselorId => {
+      const { data, error } = await supabase.from("counselor_profiles")
+        .select("user_id").eq("id", counselorId).single();
+      if (error) throw new Error("Could not establish the counselor for this request.");
+      return data?.user_id ?? null;
+    });
+  }
   const { error } = await supabase.from("counselor_requests").update({ status, updated_at: new Date().toISOString() }).eq("id", id);
   if (error) throw error;
 }

@@ -13,6 +13,14 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 // added to the client envDefine block, so secrets stay out of the bundle).
 const serverEnv = loadEnv(process.env.NODE_ENV ?? "development", process.cwd(), "");
 Object.assign(process.env, serverEnv);
+// These Supabase values are public client configuration. The server uses the
+// unprefixed names; Vite exposes only VITE_* values to the browser.
+if (process.env.SUPABASE_URL) {
+  process.env.VITE_SUPABASE_URL = process.env.SUPABASE_URL;
+}
+if (process.env.SUPABASE_PUBLISHABLE_KEY) {
+  process.env.VITE_SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
+}
 
 // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
 // @cloudflare/vite-plugin builds from this — wrangler.jsonc main alone is insufficient.
@@ -21,6 +29,11 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
+    server: {
+      host: "0.0.0.0",
+      port: 5000,
+      allowedHosts: true,
+    },
     resolve: {
       alias: {
         // Force entities to the hoisted v4.5.0 copy; a nested v7 breaks SSR.

@@ -6,6 +6,7 @@ import { useSession } from "@/hooks/useSession";
 import { loadMyGroups, loadRoster } from "@/lib/groups";
 import { openDirectThread, sendMessage } from "@/lib/messaging";
 import type { Author } from "@/lib/prayers";
+import { GroupLoadError } from "@/components/walk/GroupLoadError";
 
 const FLARE = "🕯 I'm not okay tonight. No reason to give — I just need company. (Sent with one tap from Witness.)";
 
@@ -34,7 +35,7 @@ export function NotOkayButton({ compact = false }: { compact?: boolean }) {
   const circle = circleQ.data ?? [];
 
   const light = async () => {
-    if (!userId) return;
+    if (!userId || !circleQ.isSuccess || circleQ.isFetching) return;
     setBusy(true); setError(null);
     let delivered = 0;
     for (const person of circle) {
@@ -104,7 +105,9 @@ export function NotOkayButton({ compact = false }: { compact?: boolean }) {
                   ))}
                 </ul>
 
-                <p className="mt-4 rounded-xl border border-border bg-card p-3.5 text-[12.5px] leading-snug text-ink-soft">
+                {userId && circleQ.isError ? (
+                  <GroupLoadError subject="your circle recipients; nothing has been sent" retry={() => { void circleQ.refetch(); }} retrying={circleQ.isFetching} />
+                ) : <p className="mt-4 rounded-xl border border-border bg-card p-3.5 text-[12.5px] leading-snug text-ink-soft">
                   {!userId
                     ? "Sign in to reach your circle."
                     : circleQ.isLoading
@@ -112,12 +115,12 @@ export function NotOkayButton({ compact = false }: { compact?: boolean }) {
                       : circle.length === 0
                         ? "You haven't joined a circle yet, so there's no one to message. The lines below are always open."
                         : `This goes to ${circle.length} ${circle.length === 1 ? "person" : "people"}: ${circle.slice(0, 3).map(p => p.name.split(" ")[0]).join(", ")}${circle.length > 3 ? ` and ${circle.length - 3} more` : ""}.`}
-                </p>
+                </p>}
                 {error && <p className="mt-2 text-[12px] text-destructive">{error}</p>}
 
                 <button
                   onClick={() => void light()}
-                  disabled={busy || !userId || circleQ.isLoading}
+                  disabled={busy || !userId || !circleQ.isSuccess || circleQ.isFetching}
                   className="tap-scale mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-flame py-3.5 text-[14px] font-medium text-ink disabled:opacity-50"
                 >
                   {busy ? <><Loader2 className="h-4 w-4 animate-spin" /> Sending…</> : "Light it"}

@@ -92,12 +92,13 @@ export function toAuthor(p: ProfileRow | undefined | null, fallbackId = ""): Aut
   return { id: p.user_id, name: p.display_name?.trim() || "Witness member", photo: p.avatar_url, bio: p.bio ?? null };
 }
 
-export async function loadAuthors(ids: string[]): Promise<Map<string, Author>> {
+export async function loadAuthors(ids: string[], options: { throwOnError?: boolean } = {}): Promise<Map<string, Author>> {
   const unique = Array.from(new Set(ids.filter(Boolean)));
   const map = new Map<string, Author>();
   if (!unique.length) return map;
   // Member cards only — full profile rows stay private to their owner.
-  const { data } = await supabase.rpc("member_cards", { _ids: unique });
+  const { data, error } = await supabase.rpc("member_cards", { _ids: unique });
+  if (error && options.throwOnError) throw error;
   for (const row of data ?? []) map.set(row.user_id, toAuthor(row));
   for (const id of unique) if (!map.has(id)) map.set(id, toAuthor(null, id));
   return map;

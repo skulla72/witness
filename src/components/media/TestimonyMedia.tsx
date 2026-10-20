@@ -4,6 +4,7 @@ import type { MediaType } from "@/lib/prayers";
 import { Mic } from "lucide-react";
 import { hasOverlay, overlayText, type VideoOverlay } from "@/lib/overlay";
 import { OverlayLayers } from "@/components/video/OverlayLayers";
+import { MediaLoadError } from "./MediaLoadError";
 
 /**
  * Renders a private prayer/gratitude file (video, voice, or photo) from
@@ -12,28 +13,30 @@ import { OverlayLayers } from "@/components/video/OverlayLayers";
 export function TestimonyMedia({
   path, type, className = "", controls = true, autoPlay = false, loop = false, poster, overlay,
 }: { path: string | null; type: MediaType | null; className?: string; controls?: boolean; autoPlay?: boolean; loop?: boolean; poster?: string; overlay?: VideoOverlay | null }) {
-  const { url, loading } = useSignedUrl(path);
+  const { url, loading, error, retry, onError } = useSignedUrl(path);
   const [time, setTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
   if (!path) return null;
+  if (error) return <MediaLoadError retry={retry} className={className} />;
   if (loading || !url) {
     return <div className={`bg-ink/80 animate-pulse ${className}`} aria-label="Loading media" />;
   }
   if (type === "image") {
-    return <img src={url} alt="" className={`object-cover ${className}`} />;
+    return <img src={url} onError={onError} alt="" className={`object-cover ${className}`} />;
   }
   if (type === "audio") {
     return (
       <div className={`bg-[radial-gradient(circle_at_50%_30%,oklch(0.3_0.04_60),oklch(0.18_0.02_60))] flex flex-col items-center justify-center gap-4 p-6 ${className}`}>
         <div className="h-14 w-14 rounded-full bg-paper/10 grid place-items-center"><Mic className="h-6 w-6 text-paper" /></div>
-        <audio src={url} controls className="w-full max-w-[280px]" />
+        <audio src={url} onError={onError} controls className="w-full max-w-[280px]" />
       </div>
     );
   }
   const video = (
     <video
       src={url}
+      onError={onError}
       poster={poster}
       controls={controls}
       autoPlay={autoPlay}

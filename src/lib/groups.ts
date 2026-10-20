@@ -34,9 +34,10 @@ const COLS = "id, org_id, created_by, name, description, rhythm, accepting, tone
 async function shape(rows: GroupRow[], userId: string | null): Promise<WalkGroup[]> {
   if (!rows.length) return [];
   const [facilitators, mine] = await Promise.all([
-    loadAuthors(rows.map(r => r.created_by).filter((v): v is string => !!v)),
-    userId ? supabase.from("group_members").select("group_id").eq("user_id", userId) : Promise.resolve({ data: [] as { group_id: string }[] }),
+    loadAuthors(rows.map(r => r.created_by).filter((v): v is string => !!v), { throwOnError: true }),
+    userId ? supabase.from("group_members").select("group_id").eq("user_id", userId) : Promise.resolve({ data: [] as { group_id: string }[], error: null }),
   ]);
+  if (mine.error) throw mine.error;
   const joined = new Set((mine.data ?? []).map(m => m.group_id));
   return rows.map(r => ({
     id: r.id,
@@ -79,9 +80,10 @@ export async function loadMyGroups(userId: string): Promise<WalkGroup[]> {
 
 /** Members of a group (visible only to fellow members / org leaders under RLS). */
 export async function loadRoster(groupId: string): Promise<Author[]> {
-  const { data } = await supabase.from("group_members").select("user_id").eq("group_id", groupId);
+  const { data, error } = await supabase.from("group_members").select("user_id").eq("group_id", groupId);
+  if (error) throw error;
   const ids = (data ?? []).map(m => m.user_id);
-  const authors = await loadAuthors(ids);
+  const authors = await loadAuthors(ids, { throwOnError: true });
   return ids.map(id => authors.get(id) ?? toAuthor(null, id));
 }
 

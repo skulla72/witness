@@ -1,12 +1,11 @@
-// Contact and entity details used across the legal pages.
+// Owner-confirmed operator/registration/contact only; not governing law or venue.
+// Legal drafts remain unapproved. This is not a usable postal address.
 export const LEGAL_CONTACT = {
   entity: "Common Light LLC",
-  addressLine1: "1312 17th St Unit #353",
-  addressLine2: "Denver, CO 80202",
   country: "USA",
-  email: "legal@witnessmovement.com",
-  privacyEmail: "privacy@witnessmovement.com",
+  email: "support@witnessmovement.com",
+  privacyEmail: "support@witnessmovement.com",
   state: "Colorado",
 } as const;
 
-export const LEGAL_ADDRESS = `${LEGAL_CONTACT.addressLine1}, ${LEGAL_CONTACT.addressLine2}, ${LEGAL_CONTACT.country}`;
+export const LEGAL_ADDRESS = "Colorado, USA (mailing address unconfirmed)";

@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { BRAND } from "@/config/brand";
 import { useSession } from "@/hooks/useSession";
 import { REQUEST_STATUS, counselorBySlug, counselorRate, myRequestTo, requestSession } from "@/lib/counselors";
+import { AdultCareAge } from "@/components/AdultCareAge";
+import { isAdultCareAge, TEEN_CARE_NOTICE } from "@/lib/launch-policy";
 import { ProfileImage } from "@/components/profile-media/ProfileImage";
 import { ProfileMediaGallery } from "@/components/profile-media/ProfileMediaGallery";
 
@@ -33,6 +35,7 @@ function CounselorPage() {
   const [msg, setMsg] = useState("");
   const [video, setVideo] = useState(true);
   const [sending, setSending] = useState(false);
+  const [careAge, setCareAge] = useState("");
 
   if (c.isLoading) return <Loader2 className="mx-auto mt-10 h-5 w-5 animate-spin text-ink-soft" />;
   if (!c.data) return <p className="px-5 pt-8 text-center text-[13px] text-ink-soft">This counselor page isn't available.</p>;
@@ -42,13 +45,14 @@ function CounselorPage() {
   const send = async () => {
     if (!userId) return;
     setSending(true);
-    try { await requestSession(p.id, userId, msg.trim(), video); await qc.invalidateQueries({ queryKey: ["counselor", "req"] }); setMsg(""); toast.success("Sent privately. They'll get back to you."); }
-    catch { toast.error("Couldn't send your request."); }
+    try { await requestSession(p.id, userId, msg.trim(), video, careAge); await qc.invalidateQueries({ queryKey: ["counselor", "req"] }); setMsg(""); toast.success("Sent privately. They'll get back to you."); }
+    catch (error) { toast.error(error instanceof Error ? error.message : "Couldn't send your request."); }
     finally { setSending(false); }
   };
 
   return (
     <div className="px-5 pt-6 pb-16 md:mx-auto md:max-w-2xl md:px-0">
+      <p className="mb-4 text-[12px] text-ink-soft">{TEEN_CARE_NOTICE} <Link to="/crisis" className="underline">Crisis resources remain available.</Link></p>
       <div className="flex items-center gap-4">
         <ProfileImage path={p.photo_url} alt={p.display_name} className="h-24 w-24 shrink-0" />
         <div className="min-w-0">
@@ -78,7 +82,8 @@ function CounselorPage() {
           : (<>
             <textarea value={msg} onChange={e => setMsg(e.target.value)} rows={3} maxLength={800} placeholder="A little about what you'd like help with (optional)" className="mt-3 w-full rounded-xl border border-border bg-paper px-3 py-2 text-[13px] text-ink placeholder:text-ink-soft" />
             <label className="mt-2 flex items-center gap-2 text-[12.5px] text-ink"><input type="checkbox" checked={video} onChange={e => setVideo(e.target.checked)} /> I'd prefer video</label>
-            <button disabled={sending} onClick={() => void send()} className="mt-3 rounded-full bg-ink px-5 py-2 text-[13px] text-paper disabled:opacity-50">{sending ? "Sending…" : "Send request"}</button>
+            <AdultCareAge value={careAge} onChange={setCareAge} />
+            <button disabled={sending || !isAdultCareAge(careAge)} onClick={() => void send()} className="mt-3 rounded-full bg-ink px-5 py-2 text-[13px] text-paper disabled:opacity-50">{sending ? "Sending…" : "Send request"}</button>
           </>)}
       </section>
     </div>

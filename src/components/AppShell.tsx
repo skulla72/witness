@@ -2,6 +2,8 @@ import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { signOutWitness } from "@/lib/sign-out";
+import { toast } from "sonner";
 import { Home, Sun, Users, User, Plus, Flame, Bell, BellRing, LogIn, LogOut, MessageCircle, X, Building2, BriefcaseBusiness, CircleDollarSign, Settings, Wrench } from "lucide-react";
 import { BRAND } from "@/config/brand";
 import { BrandMark } from "@/components/BrandMark";
@@ -111,7 +113,8 @@ function LargeScreenNav() {
   const activeTabs = spaceTabs[space];
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try { await signOutWitness(); }
+    catch (error) { toast.error(error instanceof Error ? error.message : "Could not sign out."); return; }
     qc.clear();
     void navigate({ to: "/login" });
   };

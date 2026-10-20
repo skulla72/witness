@@ -8,6 +8,7 @@ import { assertGiftAmountCents } from "@/lib/amounts";
  * digits so a person can tell their own accounts apart.
  */
 import { createServerFn } from "@tanstack/react-start";
+import { checkoutAccount, checkoutRefusal } from "./checkout-eligibility.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   type StripeEnv,
@@ -143,6 +144,7 @@ export const giveNowWithSavedMethod = createServerFn({ method: "POST" })
     return data;
   })
   .handler(async ({ data, context }): Promise<GiveNowResult> => {
+    try { await checkoutAccount(context.userId); } catch (error) { return checkoutRefusal(error); }
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const userId = context.userId;
 

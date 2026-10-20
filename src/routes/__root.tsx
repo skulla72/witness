@@ -8,11 +8,16 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import type { ErrorComponentProps } from "@tanstack/react-router";
+import { useEffect } from "react";
 
 import appCss from "../styles.css?url";
 import { AppShell } from "@/components/AppShell";
 import { PwaRegistration } from "@/components/PwaRegistration";
 import { Toaster } from "@/components/ui/sonner";
+import { NativeSupport } from "@/components/NativeSupport";
+import { useSession } from "@/hooks/useSession";
+import { supabase } from "@/integrations/supabase/client";
+import { LaunchEligibilityBoundary } from "@/components/LaunchEligibilityBoundary";
 
 function NotFoundComponent() {
   return (
@@ -133,8 +138,27 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <PwaRegistration />
-      <AppShell />
+      <NativeSupport />
+      <PrivateAppShell />
       <Toaster position="top-center" />
     </QueryClientProvider>
   );
+}
+
+/** Remount local drafts on account changes; do not show another person's cache. */
+function PrivateAppShell() {
+  const { userId } = useSession();
+  const router = useRouter();
+  useEffect(() => {
+    let previous: string | null | undefined;
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      const next = session?.user.id ?? null;
+      // Clear synchronously before the new account's children mount, not in
+      // an effect after their queries have already started.
+      if (previous !== undefined && previous !== next) router.options.context.queryClient.clear();
+      previous = next;
+    });
+    return () => data.subscription.unsubscribe();
+  }, [router]);
+  return <LaunchEligibilityBoundary publicContent={<Outlet />}><AppShell key={userId ?? "signed-out"} /></LaunchEligibilityBoundary>;
 }

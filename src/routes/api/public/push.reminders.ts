@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { timingSafeEqual } from "crypto";
+import { checkScheduledCredential } from "@/lib/cron-rotation.server";
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/firebase_messaging";
 
@@ -75,15 +75,7 @@ export const Route = createFileRoute("/api/public/push/reminders")({
         // Only the scheduled job (and we) know this key.
         const given = request.headers.get("x-reminder-key") ?? "";
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        const { data: keyRow } = await supabaseAdmin
-          .from("reminder_cron_key")
-          .select("key")
-          .limit(1)
-          .maybeSingle();
-        const expected = keyRow?.key ?? "";
-        const a = Buffer.from(given);
-        const b = Buffer.from(expected);
-        if (!expected || a.length !== b.length || !timingSafeEqual(a, b)) {
+        if (!(await checkScheduledCredential(given))) {
           return new Response("Bad key", { status: 401 });
         }
 

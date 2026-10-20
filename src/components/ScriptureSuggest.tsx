@@ -22,14 +22,21 @@ export function ScriptureSuggest({ situation, category, label, onSelect, selecte
   const [verses, setVerses] = useState<VerseSuggestion[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [picked, setPicked] = useState<string | null>(selected ?? null);
+  const [consenting, setConsenting] = useState(false);
 
   async function gather() {
     setState("loading");
     setError(null);
-    const res = await run({ data: { situation, category, translation: "kjv" } });
-    setVerses(res.verses);
-    setError(res.error ?? null);
-    setState("idle");
+    setConsenting(false);
+    try {
+      const res = await run({ data: { situation, category, translation: "kjv", consent: true } });
+      setVerses(res.verses);
+      setError(res.error ?? null);
+    } catch {
+      setError("Could not gather verses. Your prayer is still saved; please try again later.");
+    } finally {
+      setState("idle");
+    }
   }
 
   return (
@@ -48,7 +55,7 @@ export function ScriptureSuggest({ situation, category, label, onSelect, selecte
       )}
 
       <button
-        onClick={gather}
+        onClick={() => setConsenting(true)}
         disabled={state === "loading"}
         className="tap-scale mt-3 inline-flex items-center gap-2 rounded-full bg-ink px-4 py-2.5 text-[12.5px] text-paper disabled:opacity-60"
       >
@@ -62,6 +69,25 @@ export function ScriptureSuggest({ situation, category, label, onSelect, selecte
           </>
         )}
       </button>
+
+      {consenting && (
+        <div role="group" aria-label="AI scripture suggestion permission" className="mt-3 rounded-xl border border-border p-3">
+          <p className="text-[12.5px] leading-relaxed text-ink-soft">
+            This sends this prayer’s text and category to our external AI service
+            (through Lovable’s AI gateway, using a Google model) to suggest Bible passages.
+            Prayer text can include sensitive details. Suggestions may be mistaken;
+            they are not counseling or emergency help. This is optional and does not
+            change who can see your saved prayer. You can use the Bible without AI.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-3 text-[12.5px]">
+            <button type="button" onClick={gather} className="rounded-full bg-ink px-3 py-2 text-paper">
+              Send text and find verses
+            </button>
+            <button type="button" onClick={() => setConsenting(false)}>Not now</button>
+            <Link to="/bible" search={{ ref: "" }}>Browse Bible without AI</Link>
+          </div>
+        </div>
+      )}
 
       {error && <p className="mt-3 text-[12px] text-ink-soft">{error}</p>}
 

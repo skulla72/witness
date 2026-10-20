@@ -66,7 +66,7 @@ function CareAgreementPage() {
       </p>
 
       <p className="font-medium">
-        This is a beta document. Have qualified counsel and a clinical supervisor review it before real sessions
+        This is an unfinished, unapproved draft. Have qualified counsel and a clinical supervisor review it before real sessions
         take place.
       </p>
     </LegalPage>

@@ -1,4 +1,4 @@
-# Manual builds only: no Git triggers and no store publishing configuration.
+# Manual builds only: no Git triggers. Only witness-ios-testflight uploads.
 # iPhone signing files are fetched automatically through the Apple integration.
 workflows:
   witness-ios-check:
@@ -63,6 +63,48 @@ workflows:
       - build-native/ios/ipa/*.ipa
       - build-native/ios/archive/*.xcarchive
       - /tmp/xcodebuild_logs/*.log
+  witness-ios-testflight:
+    name: Witness iPhone — TestFlight upload, no public release
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    integrations:
+      app_store_connect: "Codemagic API Key"
+    environment:
+      node: 22
+      xcode: latest
+      groups:
+        - witness_ios_signing
+      vars:
+        # Separate from the old build-1 workflow. Apple rejects duplicates.
+        WITNESS_IOS_BUILD_NUMBER: "1020"
+    scripts:
+      - name: Check existing Apple authorization and signing assets first
+        script: |
+          set -euo pipefail
+          # Read/download existing resources only. Never create a key,
+          # certificate, bundle ID or provisioning profile.
+          app-store-connect fetch-signing-files com.commonlight.witness \
+            --type IOS_APP_STORE --strict-match-identifier
+      - name: Install locked dependencies with Bun
+        script: |
+          set -euo pipefail
+          curl -fsSL https://bun.com/install | bash -s -- bun-v1.3.6
+          "$HOME/.bun/bin/bun" install --frozen-lockfile
+      - name: Build and export with existing signing identity
+        script: |
+          set -euo pipefail
+          bash scripts/codemagic-ios.sh "$WITNESS_IOS_BUILD_NUMBER"
+    artifacts:
+      - build-native/ios/ipa/*.ipa
+      - build-native/ios/archive/*.xcarchive
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        # Upload for internal TestFlight setup; do not request external beta
+        # review, assign/invite testers, expire builds or submit publicly.
+        submit_to_testflight: false
+        submit_to_app_store: false
   witness-android:
     name: Witness Android — signed build, no upload
     instance_type: mac_mini_m2

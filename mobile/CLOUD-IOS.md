@@ -88,9 +88,10 @@ or the App Store. That upload is intentionally not configured here.
 ## Before an Apple upload
 
 The shell still loads `https://witnessmovement.com`, not the Replit preview.
-Confirm that website contains the intended changes. Resolve the missing Google
-OAuth secret in Supabase, then complete account, saved-prayer, notification,
-privacy, and real-device checks before submission.
+Confirm that website contains the intended changes. Verify the Lovable-managed
+social login and obtain a supported native broker handoff, then complete account,
+saved-prayer, notification, privacy, and real-device checks before submission.
+Manual Supabase OAuth secrets are not prerequisites for managed login.
 
 ## Official setup guides
 

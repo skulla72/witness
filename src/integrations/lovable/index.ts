@@ -3,7 +3,9 @@
 import { createLovableAuth } from "@lovable.dev/cloud-auth-js";
 import type { OAuthProvider } from "@lovable.dev/cloud-auth-js";
 import { supabase } from "../supabase/client";
-const lovableAuth = createLovableAuth();
+const lovableAuth = createLovableAuth({
+  oauthBrokerUrl: "https://witnessmovement.com/~oauth/initiate",
+});
 
 type SignInOptions = {
   redirect_uri?: string;
@@ -29,7 +31,8 @@ export const lovable = {
       }
 
       try {
-        await supabase.auth.setSession(result.tokens);
+        const { error } = await supabase.auth.setSession(result.tokens);
+        if (error) return { error };
       } catch (e) {
         return { error: e instanceof Error ? e : new Error(String(e)) };
       }

@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { checkoutAccount, checkoutRefusal } from "./checkout-eligibility.server";
 import { assertReturnUrl } from "@/lib/returnUrl";
 import {
   type StripeEnv,
@@ -46,11 +47,9 @@ export const createLightGift = createServerFn({ method: "POST" })
     return data;
   })
   .handler(async ({ data }): Promise<LightResult> => {
+    let userId: string;
+    try { userId = await checkoutAccount(); } catch (error) { return checkoutRefusal(error); }
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { getOptionalUserId } = await import("@/lib/optional-auth.server");
-    // Identity comes from the verified session only — never from the request body.
-    const userId = await getOptionalUserId();
-    if (!userId) return { error: "Please sign in to give." };
 
     const payMethod: PayMethod = data.payMethod ?? "card";
     const { data: gift, error: insertError } = await supabaseAdmin

@@ -3,10 +3,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Witness</title>
+    <title>Connection problem · Witness</title>
     <style>
       :root { color-scheme: dark; }
-      html, body { height: 100%; margin: 0; }
+      html { height: 100%; }
+      body { min-height: 100%; margin: 0; box-sizing: border-box; }
       body {
         background: #0b1729;
         color: #faf8f3;
@@ -16,17 +17,20 @@
       }
       h1 { font-size: 1.5rem; margin: 0 0 0.75rem; letter-spacing: 0.02em; }
       p { margin: 0 0 1.5rem; opacity: 0.75; line-height: 1.5; }
-      button {
+      .retry {
         background: #c9a227; color: #0b1729; border: 0; border-radius: 999px;
         padding: 0.85rem 1.75rem; font-size: 1rem; font-weight: 600;
+        display: inline-block; text-decoration: none;
       }
+      .retry:focus-visible { outline: 3px solid #faf8f3; outline-offset: 5px; }
     </style>
   </head>
   <body>
     <main>
-      <h1>Witness is offline</h1>
-      <p>You are not connected right now. Anything you were writing is saved on this phone and will send when you are back online.</p>
-      <button onclick="location.reload()">Try again</button>
+      <h1>Unable to connect to Witness</h1>
+      <p>Check your internet connection, then try again. Witness may also be temporarily unavailable.</p>
+      <p>This screen cannot confirm whether any unfinished writing was saved or sent.</p>
+      <a class="retry" href="https://witnessmovement.com">Try again</a>
     </main>
   </body>
 </html>

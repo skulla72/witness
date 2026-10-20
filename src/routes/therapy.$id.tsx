@@ -7,6 +7,8 @@ import { BRAND } from "@/config/brand";
 import { useSession } from "@/hooks/useSession";
 import { Avatar } from "@/components/Avatar";
 import { AgreementGate } from "@/components/therapy/AgreementGate";
+import { AdultCareAge } from "@/components/AdultCareAge";
+import { isAdultCareAge } from "@/lib/launch-policy";
 import {
   agreementSigned,
   deleteNote,
@@ -43,6 +45,7 @@ function TherapySession() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [starting, setStarting] = useState(false);
+  const [careAge, setCareAge] = useState("");
 
   const sessionQ = useQuery({ queryKey: ["therapy-session", id], queryFn: () => loadSession(id), enabled: !!userId });
   const session = sessionQ.data ?? null;
@@ -78,22 +81,26 @@ function TherapySession() {
   }
 
   const other = isTherapist ? session.client : session.therapist;
-  const canStart = signedQ.data === true && (session.status === "booked" || session.status === "in_progress");
+  const canStart = signedQ.data === true && (isTherapist || isAdultCareAge(careAge)) && (session.status === "booked" || session.status === "in_progress");
 
   const start = async () => {
     setStarting(true);
-    const result = await startSession(session, userId!);
-    setStarting(false);
-    if (result.error || !result.conversationId) {
-      toast.error(result.error ?? "Could not open the room.");
-      return;
-    }
-    qc.invalidateQueries({ queryKey: ["therapy-session", id] });
-    navigate({ to: "/call/$id", params: { id: result.conversationId }, search: { kind: "video", role: "start" } });
+    try {
+      const result = await startSession(session, userId!, careAge);
+      if (result.error || !result.conversationId) {
+        toast.error(result.error ?? "Could not open the room.");
+        return;
+      }
+      qc.invalidateQueries({ queryKey: ["therapy-session", id] });
+      navigate({ to: "/call/$id", params: { id: result.conversationId }, search: { kind: "video", role: "start" } });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not open the room.");
+    } finally { setStarting(false); }
   };
 
   return (
     <div className="px-5 pb-24 pt-5">
+      {!isTherapist && <AdultCareAge value={careAge} onChange={setCareAge} />}
       <Link to="/therapy" className="inline-flex items-center gap-1.5 text-[12px] text-ink-soft">
         <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.6} /> Sessions
       </Link>
@@ -119,9 +126,10 @@ function TherapySession() {
         <div className="mt-5">
           <p className="mb-3 text-[13px] text-ink-soft">The session can't begin until you sign this.</p>
           <AgreementGate
+            disabled={!isTherapist && !isAdultCareAge(careAge)}
             party={party}
             onSign={async name => {
-              await signAgreement(userId!, party, name);
+              await signAgreement(userId!, party, name, careAge);
               await qc.invalidateQueries({ queryKey: ["therapy-signed"] });
               toast.success("Signed.");
             }}

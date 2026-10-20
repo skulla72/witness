@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
@@ -8,60 +8,52 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { BRAND } from "@/config/brand";
 import { validateBetaInvitation } from "@/lib/beta-access.functions";
-import { COVENANT_VERSION } from "@/lib/covenant";
+import { COMMUNITY_ACKNOWLEDGEMENT_VERSION, requireCommunityAcknowledgement, withCommunityAttempt } from "@/lib/community-acknowledgement";
+import { Capacitor } from "@capacitor/core";
+import { NATIVE_EMAIL_CALLBACK, safeAuthNext } from "@/lib/auth-links";
+import { managedSocialSignIn } from "@/lib/managed-social-auth";
+import { EntryBrand } from "@/components/EntryBrand";
+import { CommunityAcknowledgement } from "@/components/CommunityAcknowledgement";
+import { finishInitialCallbackObservation, initialCallbackPresence, observeOAuthRestoration, type RestorationState } from "@/lib/oauth-restoration";
 
 
 export const Route = createFileRoute("/login")({
   staticData: { sitemap: false },
   component: LoginPage,
   head: () => ({ meta: [
-    { title: `Private Beta Sign In · ${BRAND.name}` },
-    { name: "description", content: `Sign in to the private ${BRAND.name} beta.` },
-    { property: "og:title", content: `Private Beta Sign In · ${BRAND.name}` },
-    { property: "og:description", content: `Sign in to the private ${BRAND.name} beta.` },
+    { title: `Sign In · ${BRAND.name}` },
+    { name: "description", content: `Sign in to ${BRAND.name}.` },
+    { property: "og:title", content: `Sign In · ${BRAND.name}` },
+    { property: "og:description", content: `Sign in to ${BRAND.name}.` },
     { property: "og:type", content: "website" },
     { name: "twitter:card", content: "summary" },
   ] }),
 });
 
-/** Youngest age allowed to hold an account. */
-const MIN_AGE = 13;
-
-/** Whole years between a birth date and today, or null if the date is unusable. */
-function ageFrom(birthday: string): number | null {
-  if (!birthday) return null;
-  const born = new Date(`${birthday}T00:00:00`);
-  if (Number.isNaN(born.getTime())) return null;
-  const today = new Date();
-  let years = today.getFullYear() - born.getFullYear();
-  const beforeBirthday =
-    today.getMonth() < born.getMonth() ||
-    (today.getMonth() === born.getMonth() && today.getDate() < born.getDate());
-  if (beforeBirthday) years -= 1;
-  if (years < 0 || years > 120) return null;
-  return years;
-}
-
 /** Only same-origin app paths are ever followed after sign-in. */
 function safeNext(raw: string | null): string {
-  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/";
-  return raw;
+  return safeAuthNext(raw);
 }
 
 function LoginPage() {
   const navigate = useNavigate();
+  const entrySearch = useLocation({ select: location => location.searchStr });
   const [next, setNext] = useState("/");
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "signup">(
+    () => new URLSearchParams(entrySearch).get("mode") === "signup" ? "signup" : "signin",
+  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [invite, setInvite] = useState("");
-  const [birthday, setBirthday] = useState("");
   const [accepted, setAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [native, setNative] = useState(false);
+  const [restoration, setRestoration] = useState<RestorationState>({ status: "normal" });
 
 
   useEffect(() => {
+    setNative(Capacitor.isNativePlatform());
     const params = new URLSearchParams(window.location.search);
     const incoming = params.get("invite") ?? "";
     if (incoming) {
@@ -70,9 +62,11 @@ function LoginPage() {
     }
     const destination = safeNext(params.get("next"));
     setNext(destination);
-    if (destination !== "/" || params.get("mode") === "signup") setMode("signup");
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: destination });
+    if (params.get("mode") === "signup") setMode("signup");
+    const fields = initialCallbackPresence();
+    return observeOAuthRestoration(supabase.auth, fields, setRestoration, async () => {
+      await navigate({ to: destination });
+      finishInitialCallbackObservation();
     });
   }, [navigate]);
 
@@ -82,29 +76,26 @@ function LoginPage() {
     setLoading(true);
     try {
       if (mode === "signup") {
-        const age = ageFrom(birthday);
-        if (age === null) throw new Error("Please enter your date of birth.");
-        if (age < MIN_AGE) throw new Error(`You must be at least ${MIN_AGE} to join ${BRAND.name}.`);
-        if (!accepted) throw new Error("Please accept the terms and privacy notice to continue.");
+        requireCommunityAcknowledgement(accepted);
         if (BRAND.inviteOnly) {
           const invitation = await validateBetaInvitation({ data: { token: invite } });
           if (!invitation.valid) throw new Error("A valid beta invitation is required.");
           window.localStorage.setItem("witness_beta_invite", invite);
         }
-        const { error } = await supabase.auth.signUp({
+        const { error } = await withCommunityAttempt(accepted, () => setAccepted(false), () => supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}${next}`,
+            emailRedirectTo: Capacitor.isNativePlatform() ? NATIVE_EMAIL_CALLBACK : `${window.location.origin}/login?next=${encodeURIComponent(next)}`,
             data: {
               full_name: name,
-              date_of_birth: birthday,
+              minimum_age_confirmed: true,
               age_confirmed_at: new Date().toISOString(),
-              terms_version: COVENANT_VERSION,
+              terms_version: COMMUNITY_ACKNOWLEDGEMENT_VERSION,
               terms_accepted_at: new Date().toISOString(),
             },
           },
-        });
+        }));
 
         if (error) throw error;
         toast.success("Check your email to confirm your account.");
@@ -115,6 +106,7 @@ function LoginPage() {
         navigate({ to: next });
       }
     } catch (err) {
+      setAccepted(false);
       toast.error(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
       setLoading(false);
@@ -122,39 +114,87 @@ function LoginPage() {
   };
 
   const handleOAuth = async (provider: "google" | "apple") => {
+    try { requireCommunityAcknowledgement(accepted); } catch (error) {
+      setAccepted(false);
+      toast.error(error instanceof Error ? error.message : "Confirm the acknowledgement."); return;
+    }
     if (mode === "signup") {
-      const age = ageFrom(birthday);
-      if (age === null) { toast.error("Please enter your date of birth first."); return; }
-      if (age < MIN_AGE) { toast.error(`You must be at least ${MIN_AGE} to join ${BRAND.name}.`); return; }
       if (!accepted) { toast.error("Please accept the terms and privacy notice to continue."); return; }
     }
 
+    const attemptedAcknowledgement = accepted;
+    // Never leave a failed/cancelled attempt available to confirm another identity.
+    // Post-auth confirmation is a separate account-bound step, not this draft.
+    setAccepted(false);
     setLoading(true);
-    const result = await lovable.auth.signInWithOAuth(provider, {
-      redirect_uri: next === "/" ? window.location.origin : `${window.location.origin}/login?next=${encodeURIComponent(next)}`,
-    });
-    if (result.error) {
-      toast.error(provider === "apple" ? "Could not sign in with Apple." : "Could not sign in with Google.");
+    try {
+      const redirectTo = new URL("/login", window.location.origin);
+      if (mode === "signup" && BRAND.inviteOnly) {
+        const invitation = await validateBetaInvitation({ data: { token: invite } });
+        if (!invitation.valid) throw new Error("A valid beta invitation is required.");
+        window.localStorage.setItem("witness_beta_invite", invite);
+      }
+      if (next !== "/") redirectTo.searchParams.set("next", next);
+      const result = await withCommunityAttempt(attemptedAcknowledgement, () => setAccepted(false), () => managedSocialSignIn({
+        provider,
+        native: Capacitor.isNativePlatform(),
+        redirectUri: redirectTo.toString(),
+        signIn: lovable.auth.signInWithOAuth,
+        communityAcknowledged: attemptedAcknowledgement,
+      }));
+      if (result.error) throw result.error;
+      if (!result.redirected) void navigate({ to: safeAuthNext(next) });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : `Could not sign in with ${provider === "apple" ? "Apple" : "Google"}.`);
+    } finally {
+      setAccepted(false);
       setLoading(false);
-      return;
     }
-    if (result.redirected) return;
-    navigate({ to: next });
   };
 
   return (
     <div className="min-h-screen bg-paper paper-grain flex items-center justify-center px-5 py-10 md:px-10">
       <div className="w-full max-w-sm md:max-w-md">
         <div className="text-center mb-8">
-          <Link to="/" className="font-serif text-[28px] text-ink">
-            {BRAND.name}<span className="text-brass">·</span>
-          </Link>
+          <EntryBrand />
           <p className="mt-2 text-[12px] uppercase tracking-[0.18em] text-ink-soft">
             {mode === "signin" ? "Welcome back" : "Begin your witness"}
           </p>
         </div>
 
-        <div className="bg-card border border-border rounded-2xl shadow-soft p-6">
+        {restoration.status !== "normal" ? (
+          <section className="bg-card border border-border rounded-2xl shadow-soft p-6" aria-label="Sign-in restoration">
+            {restoration.status === "failed" ? <>
+              <h1 className="text-lg font-semibold">Sign-in could not be completed</h1>
+              <p role="alert" className="mt-3 text-sm">Witness could not restore your signed-in session. Please start sign-in again. This does not tell us whether the provider step succeeded.</p>
+              <Button className="mt-4 w-full" onClick={() => {
+                const retry = new URL("/login", window.location.origin);
+                if (next !== "/") retry.searchParams.set("next", safeNext(next));
+                window.location.replace(retry.toString());
+              }}>Return to sign-in and retry</Button>
+              <p className="mt-4 text-xs text-muted-foreground">If this happens again, copy this safe reference for support. It contains no credentials or account details.</p>
+              <textarea aria-label="Safe sign-in support reference" readOnly
+                className="mt-2 w-full rounded border bg-background p-2 text-xs" rows={8}
+                value={JSON.stringify(restoration.reference, null, 2)} />
+              <Link to="/crisis" className="mt-3 block text-sm underline">Crisis help</Link>
+            </> : <p role="status" aria-live="polite">
+              {restoration.status === "restoring" ? "Restoring your signed-in session. Please wait…" : "Session restored. Continuing…"}
+            </p>}
+          </section>
+        ) : <div className="bg-card border border-border rounded-2xl shadow-soft p-6">
+          <p className="mb-4 text-xs text-muted-foreground">
+            {native
+              ? "Google and Apple sign-in do not yet have a supported handoff into this native app. Use email/password here, or sign in to the website in your browser (a separate session)."
+              : "Google and Apple sign-in opens Witness’s hosted sign-in service and returns here."}
+            {" "}
+            <a className="underline" href="https://witnessmovement.com/login" target="_blank" rel="noopener noreferrer">
+              Open Witness website
+            </a>
+          </p>
+          <div className="mb-4 space-y-2">
+            <CommunityAcknowledgement id="entry-community-ack" checked={accepted} onChange={setAccepted} disabled={loading} />
+            <p className="text-[11px] text-ink-soft">Required for signup and Google/Apple. Existing email/password sign-in remains available. After sign-in, confirmation is separately bound to the displayed account.</p>
+          </div>
           <div className="space-y-2.5">
             <Button
               type="button"
@@ -197,25 +237,6 @@ function LoginPage() {
                   <Label htmlFor="name">Name</Label>
                   <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required maxLength={80} />
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="birthday">Date of birth</Label>
-                  <Input id="birthday" type="date" value={birthday} onChange={(e) => setBirthday(e.target.value)} required max={new Date().toISOString().slice(0, 10)} />
-                  <p className="text-[11px] text-ink-soft">You must be {MIN_AGE} or older to join.</p>
-                </div>
-                <label className="flex items-start gap-2.5 text-[11px] leading-relaxed text-ink-soft">
-                  <input
-                    type="checkbox"
-                    checked={accepted}
-                    onChange={(e) => setAccepted(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-border accent-ink"
-                  />
-                  <span>
-                    I have read and accept the{" "}
-                    <Link to="/terms" className="underline">Terms of Use &amp; Beta Agreement</Link>, the{" "}
-                    <Link to="/privacy" className="underline">Privacy Notice</Link>, and — if I book a session — the{" "}
-                    <Link to="/care-agreement" className="underline">Care Agreement</Link>.
-                  </span>
-                </label>
               </>
             )}
 
@@ -228,7 +249,7 @@ function LoginPage() {
               <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} maxLength={72} />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
-              {mode === "signin" ? "Sign in" : "Create account"}
+              {mode === "signin" ? "Sign in" : "Continue"}
             </Button>
           </form>
 
@@ -262,7 +283,7 @@ function LoginPage() {
           </p>
 
 
-        </div>
+        </div>}
 
         <p className="mt-6 text-center text-[11px] text-ink-soft italic">{BRAND.tagline}</p>
       </div>

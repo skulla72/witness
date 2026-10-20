@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Columns2, Download, Film, Loader2, Play, RotateCcw, Share2 } from "lucide-react";
 import { toast } from "sonner";
-import { signedUrl } from "@/hooks/useSignedUrl";
+import { useSignedUrl } from "@/hooks/useSignedUrl";
+import { MediaLoadError } from "@/components/media/MediaLoadError";
 import type { Story } from "@/lib/prayers";
 import { daysBetween } from "@/lib/overlay";
 import { OverlayLayers } from "@/components/video/OverlayLayers";
@@ -21,23 +22,20 @@ export function JourneyPlayer({ story, shareable }: { story: Story; shareable?: 
   const answer = story.answer!;
   const [mode, setMode] = useState<"film" | "split">("film");
   const [stage, setStage] = useState<Stage>("idle");
-  const [askUrl, setAskUrl] = useState<string | null>(null);
-  const [answerUrl, setAnswerUrl] = useState<string | null>(null);
-  const [backdropUrl, setBackdropUrl] = useState<string | null>(null);
+  const askMedia = useSignedUrl(story.ask_media_path);
+  const answerMedia = useSignedUrl(answer.media_path);
+  const backdropMedia = useSignedUrl(story.ask_backdrop_path);
+  const { url: askUrl } = askMedia;
+  const { url: answerUrl } = answerMedia;
+  const { url: backdropUrl } = backdropMedia;
+  const media = [askMedia, answerMedia, backdropMedia];
+  const mediaUnavailable = media.some(item => item.error || item.loading);
   const [time, setTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [exporting, setExporting] = useState(false);
   const days = daysBetween(story.ask_created_at, answer.created_at);
   const askIsVideo = story.ask_media_type === "video" || story.ask_media_type === "audio";
   const answerIsVideo = answer.media_type === "video" || answer.media_type === "audio";
-
-  useEffect(() => {
-    let live = true;
-    void Promise.all([signedUrl(story.ask_media_path), signedUrl(answer.media_path), signedUrl(story.ask_backdrop_path)]).then(([a, b, c]) => {
-      if (!live) return; setAskUrl(a); setAnswerUrl(b); setBackdropUrl(c);
-    });
-    return () => { live = false; };
-  }, [story.ask_media_path, answer.media_path, story.ask_backdrop_path]);
 
   // Text-only moments and the bridge card hold for a few seconds, then move on.
   useEffect(() => {
@@ -56,9 +54,11 @@ export function JourneyPlayer({ story, shareable }: { story: Story; shareable?: 
   };
 
   const download = async () => {
+    if (mediaUnavailable || !askMedia.isCurrent()) return;
     setExporting(true);
     try {
       const blob = await exportJourney({ story, askUrl, answerUrl, days, faith: tone.faith });
+      if (!askMedia.isCurrent()) return;
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
       a.download = `witness-journey.${blob.type.includes("mp4") ? "mp4" : "webm"}`;
@@ -82,7 +82,7 @@ export function JourneyPlayer({ story, shareable }: { story: Story; shareable?: 
 
   const textCard = (label: string, text: string, answerSide = false) => (
     <div className={`absolute inset-0 grid place-items-center p-6 ${answerSide ? "bg-[radial-gradient(circle_at_50%_30%,oklch(0.9_0.06_75),oklch(0.78_0.08_70))]" : ""}`} style={!answerSide && !backdropUrl ? { background: story.ask_bg ?? "var(--paper-warm)" } : undefined}>
-      {!answerSide && backdropUrl && <><img src={backdropUrl} alt="" className="absolute inset-0 h-full w-full object-cover" /><div className="absolute inset-0 bg-ink/45" /></>}
+      {!answerSide && backdropUrl && <><img src={backdropUrl} onError={backdropMedia.onError} alt="" className="absolute inset-0 h-full w-full object-cover" /><div className="absolute inset-0 bg-ink/45" /></>}
       <div className="relative text-center">
         <p className={`text-[10px] uppercase tracking-[0.22em] ${!answerSide && backdropUrl ? "text-paper/80" : "text-ink/60"}`}>{label}</p>
         <p className={`mt-3 font-serif text-[20px] leading-snug ${!answerSide && backdropUrl ? "text-paper" : "text-ink"}`}>"{text}"</p>
@@ -95,6 +95,8 @@ export function JourneyPlayer({ story, shareable }: { story: Story; shareable?: 
 
   return (
     <section className="mx-5 mt-8" aria-label="Watch the journey">
+      {media.some(item => item.error) && <MediaLoadError retry={() => media.forEach(item => { if (item.error) item.retry(); })} />}
+      {media.some(item => item.loading) && <p role="status" className="text-xs text-ink-soft">Loading journey media…</p>}
       <div className="mb-3 flex items-center justify-between">
         <p className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.2em] text-brass"><Film className="h-3.5 w-3.5" /> Watch the journey</p>
         <div className="flex rounded-full border border-ink/10 bg-paper-warm p-0.5 text-[11px]">
@@ -107,7 +109,7 @@ export function JourneyPlayer({ story, shareable }: { story: Story; shareable?: 
         <div className="grid grid-cols-2 gap-1.5 overflow-hidden rounded-2xl bg-ink">
           {[{ url: askUrl, isVideo: askIsVideo, label: askLabel, text: story.ask_caption, overlay: story.ask_overlay, answerSide: false }, { url: answerUrl, isVideo: answerIsVideo, label: answerLabel, text: answer.caption, overlay: answer.overlay, answerSide: true }].map(side => (
             <div key={side.label} className="relative aspect-[9/14] overflow-hidden">
-              {side.isVideo && side.url ? <video src={side.url} controls playsInline preload="metadata" className="absolute inset-0 h-full w-full object-cover" /> : textCard(side.label, side.text || "…", side.answerSide)}
+              {side.isVideo && side.url ? <video src={side.url} onError={side.answerSide ? answerMedia.onError : askMedia.onError} controls playsInline preload="metadata" className="absolute inset-0 h-full w-full object-cover" /> : textCard(side.label, side.text || "…", side.answerSide)}
               <span className={`pointer-events-none absolute left-2 top-2 rounded px-1.5 py-0.5 text-[9px] uppercase tracking-[0.16em] ${side.answerSide ? "bg-brass text-ink" : "bg-ink/60 text-paper"}`}>{side.label}</span>
             </div>
           ))}
@@ -116,7 +118,7 @@ export function JourneyPlayer({ story, shareable }: { story: Story; shareable?: 
       ) : (
         <div className="relative aspect-[9/14] overflow-hidden rounded-2xl bg-ink shadow-lift">
           {stage === "idle" || stage === "done" ? (
-            <button onClick={() => setStage("ask")} className="journey-bridge absolute inset-0 grid place-items-center text-paper">
+            <button disabled={mediaUnavailable} onClick={() => setStage("ask")} className="journey-bridge absolute inset-0 grid place-items-center text-paper disabled:opacity-50">
               <span className="text-center">
                 <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-paper/15 ring-1 ring-brass/40">{stage === "done" ? <RotateCcw className="h-6 w-6" /> : <Play className="ml-1 h-6 w-6" />}</span>
                 <span className="mt-3 block font-serif text-[18px]">{stage === "done" ? "Watch again" : `${askLabel} → ${answerLabel}`}</span>
@@ -129,6 +131,7 @@ export function JourneyPlayer({ story, shareable }: { story: Story; shareable?: 
                 <>
                   <video
                     src={(stage === "ask" ? askUrl : answerUrl)!}
+                    onError={stage === "ask" ? askMedia.onError : answerMedia.onError}
                     autoPlay playsInline controls
                     onTimeUpdate={e => setTime(e.currentTarget.currentTime)}
                     onLoadedMetadata={e => setDuration(e.currentTarget.duration || 0)}
@@ -148,7 +151,7 @@ export function JourneyPlayer({ story, shareable }: { story: Story; shareable?: 
       {shareable !== false && (
         <div className="mt-3 flex gap-2">
           {shareable && <button onClick={() => void shareLink()} className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-ink/10 bg-paper-warm py-2.5 text-[12.5px] text-ink"><Share2 className="h-3.5 w-3.5" /> Share the journey</button>}
-          <button onClick={() => void download()} disabled={exporting} className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-ink/10 bg-paper-warm py-2.5 text-[12.5px] text-ink disabled:opacity-60">
+          <button onClick={() => void download()} disabled={exporting || mediaUnavailable} className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-ink/10 bg-paper-warm py-2.5 text-[12.5px] text-ink disabled:opacity-60">
             {exporting ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Making video…</> : <><Download className="h-3.5 w-3.5" /> Save as video</>}
           </button>
         </div>

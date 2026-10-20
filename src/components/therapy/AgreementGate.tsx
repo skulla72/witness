@@ -13,17 +13,18 @@ import type { Party } from "@/lib/therapy";
 interface Props {
   party: Party;
   onSign: (typedName: string) => Promise<void>;
+  disabled?: boolean;
 }
 
 /** Small-print agreement, read to the end, one box, one typed name. */
-export function AgreementGate({ party, onSign }: Props) {
+export function AgreementGate({ party, onSign, disabled = false }: Props) {
   const [read, setRead] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
 
-  const ready = agreed && name.trim().length > 1 && !saving;
+  const ready = agreed && name.trim().length > 1 && !saving && !disabled;
 
   const submit = async () => {
     if (!ready) return;
